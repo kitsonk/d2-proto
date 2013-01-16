@@ -9,7 +9,7 @@ of Dojo 2.0.  Things will change and move around!  *Use at your own risk.*
 The following modules are of interest in this repository:
 
 * [d2-proto/parser](blob/master/parser.js) - A "modern" version of the ``dojo/parser``.  It is intended to only support
-  ES5 compliant user agents.  A demonstration test can be found [here](blob/master/test/parser.html).
+  ES5 compliant user agents.  A demonstration test can be found [here](d2-proto/blob/master/test/parser.html).
 
 ## Requirements
 
@@ -20,13 +20,13 @@ The following modules are of interest in this repository:
 
 ## Documentation
 
-Experimental documentation is available [here](blob/master/docs/index.md).
+Experimental documentation is available [here](d2-proto/blob/master/docs/index.md).
 
 ## License
 
-This is licensed under the ["New" BSD License](blob/master/LICENSE).
+This is licensed under the ["New" BSD License](d2-proto/blob/master/LICENSE).
 
 ## Contributing
 
 Contributions are welcome in the form of pull requests, but must be covered under the Dojo Foundation CLA.  See
-[CONTRIBUTING.md](blob/master/CONTRIBUTING.md) for further information.
+[CONTRIBUTING.md](d2-proto/blob/master/CONTRIBUTING.md) for further information.

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Demonstration: d2-proto/parser</title>
+	<style type="text/css">
+	@import "../../dijit/themes/claro/claro.css";
+	@import "../../dijit/themes/claro/document.css";
+
+	html {
+		min-height: 100%;
+	}
+
+	body {
+		padding: 1em;
+		background-image: linear-gradient(rgb(152,192,237), rgb(239,239,239) 250px);
+		background-image: -webkit-linear-gradient(rgb(152,192,237), rgb(239,239,239) 250px);
+	}
+	</style>
+	<script type="text/javascript">
+
+	function clickMe(e){
+		console.log("clicked");
+	}
+
+	dojoConfig = {
+		async: 1,
+		pacakges: [{
+			name: "dojo",
+			location: "dojo"
+		},{
+			name: "dijit",
+			location: "dijit"
+		},{
+			name: "d2-proto",
+			location: "d2-proto"
+		}]
+	};
+	</script>
+	<script type="text/javascript" src="../../dojo/dojo.js"></script>
+	<script type="text/javascript">
+	require(["d2-proto/parser", "dijit/registry"],
+	function(parser, registry){
+		parser.parse().then(function(o){
+			console.log(o);
+			registry.byId("b1").set("label", "Hello!");
+		});
+	});
+	</script>
+</head>
+<body class="claro">
+	<h1>Demonstration: d2-proto/parser</h1>
+	<button type="button" id="b1" data-dojo-type="dijit/form/Button">
+		<script type="dojo/on" data-dojo-event="click" data-dojo-args="e">
+			console.log("clicked");
+		</script>
+		<script type="dojo/watch" data-dojo-prop="label" data-dojo-args="oldValue, newValue">
+			console.log("label:", oldValue, newValue);
+		</script>
+		<span>Click Me!</span>
+	</button>
+</body>

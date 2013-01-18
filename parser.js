@@ -4,11 +4,13 @@ define([
 	"dojo/_base/lang", // lang.getObject, lang.setObject, lang.mixin, lang.hitch
 	"dojo/_base/window", // win.document
 	"dojo/aspect", // aspect.before, aspect.around, aspect.after
-	"dojo/Deferred",
-	"dojo/on",
-	"dojo/query",
+	"dojo/Deferred", // Deferred
+	"dojo/on", // on
+	"dojo/promise/all", // all
+	"dojo/query", // query().forEach
+	"dojo/when", // when
 	"dojo/domReady!"
-], function(require, debug, lang, win, aspect, Deferred, on, query) {
+], function(require, debug, lang, win, aspect, Deferred, on, all, query, when) {
 
 	var scopeBase = "dojo",
 		attributeBase = "data-" + scopeBase + "-",
@@ -50,30 +52,61 @@ define([
 	}
 
 	function promiseRequire(mids) {
-			// summary:
-			//		Performs a context require on an array of module IDs, but returns as a promise
-			//		which is fulfilled by the array of modules.
-			// mids: String[]
-			//		The modules to be required in and returned.
-			// returns: dojo/promise/Promise
+		// summary:
+		//		Performs a context require on an array of module IDs, but returns as a promise
+		//		which is fulfilled by the array of modules.
+		// mids: String[]
+		//		The modules to be required in and returned.
+		// returns: dojo/promise/Promise
 
-			var dfd = new Deferred();
-			if(mids && mids.length){
-				debug.warn("Auto-requiring modules");
-				try {
-					require(mids, function(){
-						dfd.resolve(Array.prototype.slice.call(arguments, 0));
-					});
-				} catch(e) {
-					dfd.reject(e);
-				}
-			} else {
-				dfd.resolve([]);
+		var dfd = new Deferred();
+		if(mids && mids.length){
+			debug.warn("WARNING: Auto-requiring modules");
+			try {
+				require(mids, function(){
+					dfd.resolve(Array.prototype.slice.call(arguments, 0));
+				});
+			} catch(e) {
+				dfd.reject(e);
 			}
-			return dfd.promise;
+		} else {
+			dfd.resolve([]);
+		}
+		return dfd.promise;
 	}
 
-	function functionFromScript(script){
+	function declarativeRequire(node) {
+		// summary:
+		//		Takes the `innerHTML` of a DOMNode, converts it into a object hash, requires in the supplied modules
+		//		based on their module ID and then sets the modules as global objects as identified by the key in their
+		//		hash.
+		// 
+		var dfd = new Deferred();
+
+		var midHash = eval("({" + node.innerHTML + "})"),
+			vars = [],
+			mids = [];
+
+		for(var name in midHash) {
+			vars.push(name);
+			mids.push(midHash[name]);
+		}
+
+		try {
+			require(mids, function() {
+				vars.forEach(function(name, idx) {
+					lang.setObject(name, arguments[idx]);
+				});
+				dfd.resolve(arguments);
+			});
+		} catch(e) {
+			dfd.reject(e);
+		}
+
+		return dfd.promise;
+	}
+
+	function functionFromScript(script) {
 		// summary:
 		//		Take a `<script>` DOMNode and convert it into a Function.
 		// script: DOMNode
@@ -122,14 +155,15 @@ define([
 
 			var instances = objects.map(function(obj){
 				if(!obj.ctor) {
-					obj.ctor = getCtor(obj.types);
+					obj.ctor = getCtor(obj.types);  // Get ctor will now throw if it cannot be resolved
 					obj.proto = obj.ctor && obj.ctor.prototype;
 				}
 				var props = obj.node.getAttribute(propsAttribute);
 				if(props) props = convertPropsString(props);
+				props = props || {};
 
 				var scripts = [];
-				if(!(obj.ctor && obj.ctor._noScript || obj.proto._noScript)) {
+				if(!((obj.ctor && obj.ctor._noScript) || (obj.proto && obj.proto._noScript))) {
 					query('> script[type^="dojo/"]', obj.node).forEach(function(script) {
 						obj.node.removeChild(script);
 						var scriptType = script.getAttribute("type");
@@ -222,8 +256,9 @@ define([
 
 		scan: function(rootNode, options) {
 			// summary:
-			//		Scan the DOM for decorated nodes that should be instantiated as Objects.  It returns a promise that
-			//		is fulfilled with an array of Objects that contain information about how the nodes should be
+			//		Scan the DOM for decorated nodes that should be instantiated as Objects as well as `<script>`
+			//		blocks that indicate modules that should be required.  It returns a promise that is fulfilled with
+			//		an array of Objects that contain information about how the nodes should be
 			//		instantiated.
 			// rootNode: DOMNode?
 			//		The DOMNode that should serve as the base for the scan.  If null or undefined, defaults to the
@@ -231,55 +266,77 @@ define([
 			// options: Object?
 			//		A hash of options.  See .parse() for details.
 			// returns: dojo/promise/Promise
+
+			// setup rootNode and optins if not provided
 			rootNode = rootNode || win.body();
 			options = options || {};
 
-			var objects = [],
-				mids = [],
-				midHash = {};
+			// an array that may contain declarative require promises
+			var dr = [];
 
-			query("[" + typeAttribute + "]", rootNode).forEach(function(node) {
-				var mixins = node.getAttribute(mixinsAttribute),
-					type = node.getAttribute(typeAttribute),
-					types = mixins ? [type].concat(mixins.split(/\s*,\s*/)) : [type],
-					ctor;
+			if(!options.noDeclarativeRequire) {
+				// select node that are ``<script type="dojo/require">``
+				query('script[type="dojo/require"]', rootNode).forEach(function(script){
+					// require in the modules inside the script object
+					dr.push(declarativeRequire(script));
 
-				try {
-					ctor = getCtor(types);
-				} catch(e) {
-					types.forEach(function(mid) {
-						if(~mid.indexOf("/")){
-							mids.push(mid);
-							midHash[mid] = true;
-						}
-					});
-				}
-
-				objects.push({
-					node: node,
-					types: types,
-					ctor: ctor
+					// remove the node from the DOM so it isn't seen again
+					script.parentNode.removeChild(script);
 				});
-			});
+			}
 
-			return promiseRequire(mids).then(function(){
-				return objects;
+			return when(dr.length ? all(dr) : true).then(function(){
+				var objects = [],
+					mids = [],
+					midHash = {};
+
+				query("[" + typeAttribute + "]", rootNode).forEach(function(node) {
+					var mixins = node.getAttribute(mixinsAttribute),
+						type = node.getAttribute(typeAttribute),
+						types = mixins ? [type].concat(mixins.split(/\s*,\s*/)) : [type],
+						ctor;
+
+					try {
+						ctor = getCtor(types);
+					} catch(e) {
+						types.forEach(function(mid) {
+							if(~mid.indexOf("/")){
+								mids.push(mid);
+								midHash[mid] = true;
+							}
+						});
+					}
+
+					objects.push({
+						node: node,
+						types: types,
+						ctor: ctor
+					});
+				});
+
+				return when(options.noAutoRequire ? true : promiseRequire(mids)).then(function(){
+					return objects;
+				});
 			});
 		},
 
 		parse: function(rootNode, options) {
 			// summary:
-			//		Scan the DOM for decorated nodes that should be instantiated as Object and instantiate the objects.
-			//		The return is a promise which is fulfilled with an array of the instantiated objects.
+			//		Scan the DOM for decorated nodes that should be instantiated as Object and instantiate the objects
+			//		and script nodes which indicate modules that should be required into and mapped to global
+			//		variables.  The return is a promise which is fulfilled with an array of the instantiated objects.
 			// rootNode: DOMNode?
 			//		The DOMNode that should serve as the base for the scan.  If null or undefined, defaults to the
 			//		body of the window.
 			// options: Object?
 			//		A hash of options:
 			//
-			//			 Option | Default | Description
-			//			--------|---------|-------------
-			//			noStart | `false` | Whether or not to call `.startup()` on instances.
+			//			 Option              | Default     | Description
+			//			---------------------|-------------|-------------
+			//			noStart              | `false`     | Whether or not to call `.startup()` on instances.
+			//			propThis             | `undefined` | What to use for ``this`` when evaluating a property attribute string.  This is specifically designed for templates that contain widgets.
+			//			noDeclarativeRequire | `false`     | If `true` it disables scanning the DOM for declarative requires to increase performance
+			//			noAutoRequire        | `false`     | If `true` disables the ability to auto-require modules.  If auto-require is disabled, any modules not already loaded will cause the parser to error when it attempts to instantiate the object.
 			//
 			// returns: dojo/promise/Promise
 

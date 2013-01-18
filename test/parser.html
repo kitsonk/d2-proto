@@ -49,11 +49,14 @@
 </head>
 <body class="claro">
 	<h1>Demonstration: d2-proto/parser</h1>
+	<script type="dojo/require">
+		"app.Button": "dijit/form/Button"
+	</script>
 	<button type="button" id="b1" data-dojo-type="dijit/form/Button">
 		<script type="dojo/on" data-dojo-event="click" data-dojo-args="e">
 			console.log("clicked");
 		</script>
-		<script type="dojo/watch" data-dojo-prop="label" data-dojo-args="oldValue, newValue">
+		<script type="dojo/watch" data-dojo-prop="label" data-dojo-args="prop, oldValue, newValue">
 			console.log("label:", oldValue, newValue);
 		</script>
 		<span>Click Me!</span>

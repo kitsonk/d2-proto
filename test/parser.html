@@ -38,11 +38,13 @@
 	</script>
 	<script type="text/javascript" src="../../dojo/dojo.js"></script>
 	<script type="text/javascript">
-	require(["d2-proto/parser", "dijit/registry"],
+	require({
+		aliases: [ [ "dojo/parser", "d2-proto/parser" ] ]
+	}, ["dojo/parser", "dijit/registry", "dijit/Editor"],
 	function(parser, registry){
+		var startTime = Date.now();
 		parser.parse().then(function(o){
-			console.log(o);
-			registry.byId("b1").set("label", "Hello!");
+			console.log("duration: ", Date.now() - startTime);
 		});
 	});
 	</script>
@@ -61,4 +63,23 @@
 		</script>
 		<span>Click Me!</span>
 	</button>
+	<div data-dojo-type="dijit/Editor">
+		Here is some initial content.
+	</div>
+	<input type="text" id="tb1" data-dojo-type="dijit/form/TextBox">
+	<input type="text" id="tb2" data-dojo-type="dijit/form/TextBox">
+	<input type="text" id="tb3" data-dojo-type="dijit/form/TextBox">
+	<input type="text" id="tb4" data-dojo-type="dijit/form/TextBox">
+	<input type="text" id="tb5" data-dojo-type="dijit/form/TextBox">
+	<input type="text" id="tb6" data-dojo-type="dijit/form/TextBox">
+	<input type="text" id="tb7" data-dojo-type="dijit/form/TextBox">
+	<input type="text" id="tb8" data-dojo-type="dijit/form/TextBox">
+	<div>
+		<div><div><div><div><div><div><div><div><div><div>
+			<div id="c1" data-dojo-type="dijit/Calendar"></div>
+		</div></div></div></div></div></div></div></div></div></div>
+	</div>
+	<div id="cp1" data-dojo-type="dijit/layout/ContentPane">
+		<div>Initial content</div>
+	</div>
 </body>

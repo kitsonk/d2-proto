@@ -10,6 +10,7 @@ The following modules are of interest in this repository:
 
 * [d2-proto/parser](d2-proto/blob/master/parser.js) - A "modern" version of the ``dojo/parser``.  It is intended to only
   support ES5 compliant user agents.  A demonstration test can be found [here](d2-proto/blob/master/test/parser.html).
+* [d2-proto/debug](d2-proto/blob/master/debug.js) - A "stub" of what might be required in a Dojo 2.0 debug API.
 
 ## Requirements
 
@@ -17,6 +18,9 @@ The following modules are of interest in this repository:
 
 * [dojo](/dojo/dojo) 1.8+
 * [dojo2-teststack](/csnover/dojo2-teststack) - for unit testing
+
+Also, until `teststack` is feature complete, there are some additional tests based off of D.O.H. in the `tests` folder,
+with the experimental `teststack` tests in `test`.
 
 ## Documentation
 

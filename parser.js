@@ -5,12 +5,13 @@ define([
 	'dojo/_base/window', // win.document
 	'dojo/aspect', // aspect.before, aspect.around, aspect.after
 	'dojo/Deferred', // Deferred
+	'dojo/dom', // dom.byId
 	'dojo/on', // on
 	'dojo/promise/all', // all
 	'dojo/query', // query().forEach
 	'dojo/when', // when
 	'dojo/domReady!'
-], function (require, debug, lang, win, aspect, Deferred, on, all, query, when) {
+], function (require, debug, lang, win, aspect, Deferred, dom, on, all, query, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser
 	/*jshint evil:true */
@@ -28,7 +29,8 @@ define([
 		scriptEventAttribute = attributeBase + 'event',
 		scriptPropAttribute = attributeBase + 'prop',
 		scriptMethodAttribute = attributeBase + 'method',
-		scriptTypeBase = scopeBase + '/';
+		scriptTypeBase = scopeBase + '/',
+		scriptTypeRegEx = /^dojo\/\w/i;
 
 	var ctorMap = {};
 	function getCtor(types) {
@@ -47,9 +49,11 @@ define([
 			var mixins = types.map(function (t) {
 				return ctorMap[t] = ctorMap[t] || (~t.indexOf('/') && require(t)) || lang.getObject(t);
 			});
-			var ctor = mixins.shift();
-			ctorMap[ts] = mixins.length ? (ctor.createSubclass ? ctor.createSubclass(mixins) :
-				ctor.extend.apply(ctor, mixins)) : ctor;
+			if (mixins.length > 1) {
+				var ctor = mixins.shift();
+				ctorMap[ts] = ctor.createSubclass ? ctor.createSubclass.apply(ctor, mixins) :
+					ctor.extend.apply(ctor, mixins);
+			}
 		}
 		return ctorMap[ts];
 	}
@@ -83,7 +87,10 @@ define([
 		//		Takes the `innerHTML` of a DOMNode, converts it into a object hash, requires in the supplied modules
 		//		based on their module ID and then sets the modules as global objects as identified by the key in their
 		//		hash.
-		//
+		// node: DOMNode
+		//		The DOM node that contains the declarative require object hash
+		// returns: dojo/promise/Promise
+		
 		var dfd = new Deferred();
 
 		var midHash = eval('({' + node.innerHTML + '})'),
@@ -116,6 +123,7 @@ define([
 		//		The DOMNode to convert into a Function.  If the node contains an argument or with attribute, those are
 		//		added to the returned function.
 		// returns: Function
+
 		var prefix = '',
 			suffix = '',
 			args = script.getAttribute(scriptArgsAttribute) || '',
@@ -136,10 +144,83 @@ define([
 		// summary:
 		//		eval is evil, except when it isn't.  There is no other way to take a text string and convert it into a
 		//		JavaScript object.
+
 		return eval('({' + props + '})');
 	}
 
+	function getProps(obj) {
+		// summary:
+		//		Iterates through all the properties of the objects prototype before instantiation, looking for any
+		//		attributes that might be on the original node which should be copied into the properties to instantiate
+		//		the object.
+		// obj: Object
+		//		The object that contains a obj.node and obj.proto
+		// returns: Object
+		//		A hash of properties to use to instantiate the object
+
+		var props = {};
+		if (obj.node && obj.proto) {
+			var p, v, t;
+			for (p in obj.proto) {
+				v = obj.node.getAttribute(p);
+				v = v && v.nodeValue;
+				t = typeof obj.proto[p];
+				if (!v && (t !== 'boolean' || v !== '')) {
+					continue;
+				}
+				if (obj.proto[p] instanceof Array) {
+					props[p] = v.split(/\s*,\s*/);
+				} else if (t === 'string') {
+					props[p] = v;
+				} else if (t === 'number') {
+					props[p] = v - 0;
+				} else if (t === 'boolean') {
+					props[p] = (v !== 'false');
+				} else if (t === 'object') {
+					props[p] = convertPropsString(v);
+				} else if (t === 'function') {
+					props[p] = lang.getObject(v, false) || new Function(v);
+					obj.node.removeAttribute(p);
+				}
+			}
+		}
+		return props;
+	}
+
+	function getScriptNodes(node) {
+		// summary:
+		//		Iterates through all the direct child nodes of the supplied node, returning any nodes that are
+		//		identified as "Declarative Scripts" to be "attached" to the object after instantiation.
+		// node: DOMNode
+		//		The node that is the parent of any potential script nodes.
+		// returns: Array
+		//		This will be the array of script nodes that contain declarative scripting.
+
+		var scripts = [],
+			child = node.firstChild,
+			type;
+		while (child) {
+			if (child.nodeType === 1) {
+				if (child.nodeName.toLowerCase() === 'script') {
+					type = child.getAttribute('type');
+					if (type && scriptTypeRegEx.test(type)) {
+						scripts.push(child);
+					}
+				}
+			}
+			child = child.nextSibling;
+		}
+		return scripts;
+	}
+
 	return {
+		_clear: function () {
+			// summary:
+			//		Used in performance testing to clear caches
+
+			ctorMap = {};
+		},
+
 		instantiate: function (objects, options) {
 			// summary:
 			//		Instantiate an array of objects and return the instantiated instances
@@ -161,15 +242,39 @@ define([
 					obj.ctor = getCtor(obj.types);  // Get ctor will now throw if it cannot be resolved
 					obj.proto = obj.ctor && obj.ctor.prototype;
 				}
-				var props = obj.node.getAttribute(propsAttribute);
-				if (props) {
-					props = convertPropsString(props);
+
+				var propsAttr = obj.node.getAttribute(propsAttribute),
+					dojoAttachPoint = obj.node.getAttribute(attachPointAttribute),
+					dojoAttachEvent = obj.node.getAttribute(attachEventAttribute),
+					props = getProps(obj);
+
+				if (dojoAttachPoint) {
+					props.dojoAttachPoint = dojoAttachPoint;
 				}
-				props = props || {};
+
+				if (dojoAttachEvent) {
+					props.dojoAttachEvent = dojoAttachEvent;
+				}
+
+				// Items from the data-dojo-props overrides anything derived from the attributes
+				if (propsAttr) {
+					props = lang.mixin(props, convertPropsString(propsAttr));
+				}
+
+				// If mixin is present, then it will override anything in props
+				if (options.mixin) {
+					props = lang.mixin(props, options.mixin);
+				}
+
+				// If a template, then property set on the properties
+				if (options.template) {
+					props.template = true;
+				}
 
 				var scripts = [];
 				if (!((obj.ctor && obj.ctor._noScript) || (obj.proto && obj.proto._noScript))) {
-					query('> script[type^="dojo/"]', obj.node).forEach(function (script) {
+					getScriptNodes(obj.node).forEach(function (script) {
+					//query('> script[type^="dojo/"]', obj.node).forEach(function (script) {
 						obj.node.removeChild(script);
 						var scriptType = script.getAttribute('type');
 						switch (scriptType) {
@@ -295,6 +400,8 @@ define([
 					mids = [],
 					midHash = {};
 
+				// qSA (via query) is more efficient than the getElementsByTagName, in both dense and sparse
+				// decorated DOMs.
 				query('[' + typeAttribute + ']', rootNode).forEach(function (node) {
 					var mixins = node.getAttribute(mixinsAttribute),
 						type = node.getAttribute(typeAttribute),
@@ -319,9 +426,9 @@ define([
 					});
 				});
 
-				return when(options.noAutoRequire ? true : promiseRequire(mids)).then(function () {
+				return when(options.noAutoRequire ? objects : promiseRequire(mids).then(function () {
 					return objects;
-				});
+				}));
 			});
 		},
 
@@ -340,6 +447,7 @@ define([
 			//			---------------------|-------------|-------------
 			//			noStart              | `false`     | Whether or not to call `.startup()` on instances.
 			//			propThis             | `undefined` | What to use for ``this`` when evaluating a property attribute string.  This is specifically designed for templates that contain widgets.
+			//			mixin                | `undefined` | If present, this Object will be mixed into every Objects configuration object prior to instantiation.
 			//			noDeclarativeRequire | `false`     | If `true` it disables scanning the DOM for declarative requires to increase performance
 			//			noAutoRequire        | `false`     | If `true` disables the ability to auto-require modules.  If auto-require is disabled, any modules not already loaded will cause the parser to error when it attempts to instantiate the object.
 			//
@@ -362,8 +470,6 @@ define([
 			// This should be the simplified version of the arguments in the future:
 			// rootNode = rootNode || win.body();
 			// options = options || {};
-
-			console.log('parser.parse', rootNode, options);
 
 			var self = this,
 				p = this.scan(rootNode, options).then(function (objects) {

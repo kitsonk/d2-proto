@@ -8,10 +8,9 @@ define([
 	'dojo/dom', // dom.byId
 	'dojo/on', // on
 	'dojo/promise/all', // all
-	'dojo/query', // query().forEach
 	'dojo/when', // when
 	'dojo/domReady!'
-], function (require, debug, lang, win, aspect, Deferred, dom, on, all, query, when) {
+], function (require, debug, lang, win, aspect, Deferred, dom, on, all, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser
 	/*jshint evil:true */
@@ -90,7 +89,7 @@ define([
 		// node: DOMNode
 		//		The DOM node that contains the declarative require object hash
 		// returns: dojo/promise/Promise
-		
+
 		var dfd = new Deferred();
 
 		var midHash = eval('({' + node.innerHTML + '})'),
@@ -213,6 +212,18 @@ define([
 		return scripts;
 	}
 
+	function qSA(selector, node) {
+		// summary:
+		//		A very efficient helper function that does a querySelectorAll and returns an Array.  This is done to
+		//		avoid any performance overhead of dojo/query or any selector engine.
+		// selector: String
+		//		The CSS selector
+		// node: DOMNode
+		//		The node to server as root for the query
+
+		return Array.prototype.slice.call(node.querySelectorAll(selector));
+	}
+
 	return {
 		_clear: function () {
 			// summary:
@@ -274,7 +285,6 @@ define([
 				var scripts = [];
 				if (!((obj.ctor && obj.ctor._noScript) || (obj.proto && obj.proto._noScript))) {
 					getScriptNodes(obj.node).forEach(function (script) {
-					//query('> script[type^="dojo/"]', obj.node).forEach(function (script) {
 						obj.node.removeChild(script);
 						var scriptType = script.getAttribute('type');
 						switch (scriptType) {
@@ -377,16 +387,20 @@ define([
 			//		A hash of options.  See .parse() for details.
 			// returns: dojo/promise/Promise
 
-			// setup rootNode and optins if not provided
+			// setup rootNode and options if not provided
 			rootNode = rootNode || win.body();
 			options = options || {};
+
+			if (typeof rootNode === 'string') {
+				rootNode = dom.byId(rootNode);
+			}
 
 			// an array that may contain declarative require promises
 			var dr = [];
 
 			if (!options.noDeclarativeRequire) {
 				// select node that are ``<script type="dojo/require">``
-				query('script[type="dojo/require"]', rootNode).forEach(function (script) {
+				qSA('script[type="dojo/require"]', rootNode).forEach(function (script) {
 					// require in the modules inside the script object
 					dr.push(declarativeRequire(script));
 
@@ -400,9 +414,9 @@ define([
 					mids = [],
 					midHash = {};
 
-				// qSA (via query) is more efficient than the getElementsByTagName, in both dense and sparse
+				// querySelectorAll is more efficient than the getElementsByTagName, in both dense and sparse
 				// decorated DOMs.
-				query('[' + typeAttribute + ']', rootNode).forEach(function (node) {
+				qSA('[' + typeAttribute + ']', rootNode).forEach(function (node) {
 					var mixins = node.getAttribute(mixinsAttribute),
 						type = node.getAttribute(typeAttribute),
 						types = mixins ? [type].concat(mixins.split(/\s*,\s*/)) : [type],

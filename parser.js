@@ -32,7 +32,7 @@ define([
 		scriptTypeRegEx = /^dojo\/\w/i;
 
 	var ctorMap = {};
-	function getCtor(types) {
+	function getCtor(types, contextRequire) {
 		// summary:
 		//		Retrieves a constructor based on the array of `types` passed to the function.  If the array contains
 		//		more than one member, the second and subsequent types will be "mixed in" to the first, based on how
@@ -41,12 +41,14 @@ define([
 		//		be thrown.
 		// types: String[]
 		//		An array of constructor types.  They can either be in the format of module IDs or global variables.
+		// contextRequire: Function
+		//		The context `require()` that should be used to resolve the MIDs
 		// returns: Object
 		//		An object that is intended to be a constructor prototype to be instantiated.
 		var ts = types.join();
 		if (!ctorMap[ts]) {
 			var mixins = types.map(function (t) {
-				return ctorMap[t] = ctorMap[t] || (~t.indexOf('/') && require(t)) || lang.getObject(t);
+				return ctorMap[t] = ctorMap[t] || (~t.indexOf('/') && contextRequire(t)) || lang.getObject(t);
 			});
 			if (mixins.length > 1) {
 				var ctor = mixins.shift();
@@ -57,19 +59,21 @@ define([
 		return ctorMap[ts];
 	}
 
-	function promiseRequire(mids) {
+	function promiseRequire(mids, contextRequire) {
 		// summary:
 		//		Performs a context require on an array of module IDs, but returns as a promise
 		//		which is fulfilled by the array of modules.
 		// mids: String[]
 		//		The modules to be required in and returned.
+		// contextRequire: Function
+		//		The context `require()` to be used for resolving the modules.
 		// returns: dojo/promise/Promise
 
 		var dfd = new Deferred();
 		if (mids && mids.length) {
 			debug.warn('WARNING: Auto-requiring modules: ' + mids.join(', '));
 			try {
-				require(mids, function () {
+				contextRequire(mids, function () {
 					dfd.resolve(Array.prototype.slice.call(arguments, 0));
 				});
 			} catch (e) {
@@ -81,13 +85,15 @@ define([
 		return dfd.promise;
 	}
 
-	function declarativeRequire(node) {
+	function declarativeRequire(node, contextRequire) {
 		// summary:
 		//		Takes the `innerHTML` of a DOMNode, converts it into a object hash, requires in the supplied modules
 		//		based on their module ID and then sets the modules as global objects as identified by the key in their
 		//		hash.
 		// node: DOMNode
 		//		The DOM node that contains the declarative require object hash
+		// contextRequire: Function
+		//		The contextual `require()` to be used for resolving modules.
 		// returns: dojo/promise/Promise
 
 		var dfd = new Deferred();
@@ -102,7 +108,7 @@ define([
 		}
 
 		try {
-			require(mids, function () {
+			contextRequire(mids, function () {
 				vars.forEach(function (name, idx) {
 					lang.setObject(name, arguments[idx]);
 				});
@@ -247,10 +253,11 @@ define([
 			// returns: Array
 
 			options = options || {};
+			options.contextRequire = options.contextRequire = require;
 
 			var instances = objects.map(function (obj) {
 				if (!obj.ctor) {
-					obj.ctor = getCtor(obj.types);  // Get ctor will now throw if it cannot be resolved
+					obj.ctor = getCtor(obj.types, options.contextRequire);  // Get ctor will now throw if it cannot be resolved
 					obj.proto = obj.ctor && obj.ctor.prototype;
 				}
 
@@ -390,6 +397,7 @@ define([
 			// setup rootNode and options if not provided
 			rootNode = rootNode || win.body();
 			options = options || {};
+			options.contextRequire = options.contextRequire || require;
 
 			if (typeof rootNode === 'string') {
 				rootNode = dom.byId(rootNode);
@@ -402,7 +410,7 @@ define([
 				// select node that are ``<script type="dojo/require">``
 				qSA('script[type="dojo/require"]', rootNode).forEach(function (script) {
 					// require in the modules inside the script object
-					dr.push(declarativeRequire(script));
+					dr.push(declarativeRequire(script, options.contextRequire));
 
 					// remove the node from the DOM so it isn't seen again
 					script.parentNode.removeChild(script);
@@ -423,7 +431,7 @@ define([
 						ctor;
 
 					try {
-						ctor = getCtor(types);
+						ctor = getCtor(types, options.contextRequire);
 					} catch (e) {
 						types.forEach(function (mid) {
 							if (~mid.indexOf('/') && !midHash[mid]) {
@@ -440,9 +448,10 @@ define([
 					});
 				});
 
-				return when(options.noAutoRequire ? objects : promiseRequire(mids).then(function () {
-					return objects;
-				}));
+				return when(options.noAutoRequire ? objects : promiseRequire(mids, options.contextRequire)
+					.then(function () {
+						return objects;
+					}));
 			});
 		},
 
@@ -464,6 +473,7 @@ define([
 			//			mixin                | `undefined` | If present, this Object will be mixed into every Objects configuration object prior to instantiation.
 			//			noDeclarativeRequire | `false`     | If `true` it disables scanning the DOM for declarative requires to increase performance
 			//			noAutoRequire        | `false`     | If `true` disables the ability to auto-require modules.  If auto-require is disabled, any modules not already loaded will cause the parser to error when it attempts to instantiate the object.
+			//			contextRequire       | `undefined` | Used to provide a context aware `require()` to be used for module resolution.  If not provided, defaults to the context of the parser module.
 			//
 			// returns: dojo/promise/Promise
 

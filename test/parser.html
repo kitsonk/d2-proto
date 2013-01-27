@@ -40,8 +40,9 @@
 	<script type="text/javascript" src="../../dojo/dojo.js"></script>
 	<script type="text/javascript">
 	require({
-		aliases: [ [ "dojo/parser", "d2-proto/parser" ] ]
-	}, ["dojo/parser", "dijit/registry", "dijit/Editor"],
+		aliases: [ [ "dojo/parser", "d2-proto/parser" ],
+			[ "dijit/_WidgetsInTemplateMixin", "d2-proto/patch/_WidgetsInTemplateMixin" ] ]
+	}, ["dojo/parser", "dijit/registry", "dijit/Editor", "dijit/layout/TabContainer", "dijit/layout/ContentPane"],
 	function(parser, registry){
 		var startTime = Date.now();
 		parser.parse().then(function(o){
@@ -81,6 +82,21 @@
 		</div></div></div></div></div></div></div></div></div></div>
 	</div>
 	<div id="cp1" data-dojo-type="dijit/layout/ContentPane">
-		<div>Initial content</div>
+		<div>
+			<button type="button" id="b2" data-dojo-type="dijit/form/Button">
+				<script type="dojo/on" data-dojo-event="click" data-dojo-args="e">
+					console.log("clicked", e);
+				</script>
+				<span>Hello!</span>
+			</button>
+		</div>
+	</div>
+	<div id="tc1" data-dojo-type="dijit/layout/TabContainer" style="height: 100px; width: 200px">
+		<div id="tab1" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: 'Hello'">
+			Hello!
+		</div>
+		<div id="tab2" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="title: 'Tab2'">
+			Tab 2!
+		</div>
 	</div>
 </body>

@@ -30,12 +30,14 @@
 	<script type="text/javascript">
 	require([
 		'd2-proto/parser',
+		'dojo/parser',
+		'dojox/mobile/parser',
 		'dojo/_base/declare',
 		'dojo/dom',
 		'dojo/dom-construct',
 		'dojo/query',
 		'doh'
-	], function (parser, declare, dom, domConst, query, doh) {
+	], function (parser, oldParser, mobileParser, declare, dom, domConst, query, doh) {
 
 		// Create some pseudo types
 		declare('TextBox', null, {
@@ -81,29 +83,59 @@
 
 		doh.register('parser performance tests', [
 			{
-				name: 'scan() with no widgets',
+				name: 'parser - scan() with no widgets',
 				testType: 'perf',
 				trialIterations: 20,
 				setUp: function() {
-					dom.byId('status').innerHTML = 'Running scan() with no widgets test...';
+					dom.byId('status').innerHTML = 'parser - Running scan() with no widgets test...';
 					var rows = query('tr', 'tbody');
 					for (var i = 0; i < 55; i++) {
 						domConst.place(rows[i%2 + 1].cloneNode(true), 'tbody');
 					}
-				},
-				tearDown: function() {
-					domConst.empty('scan');
 				},
 				runTest: function() {
 					parser._clear();
 					parser.parse('scan');
 				}
 			}, {
-				name: 'scan() with lots of widgets',
+				name: 'dojo/parser - scan() with no widgets',
+				testType: 'perf',
+				trialIterations: 20,
+				setUp: function() {
+					dom.byId('status').innerHTML = 'dojo/parser - Running scan() with no widgets test...';
+					// var rows = query('tr', 'tbody');
+					// for (var i = 0; i < 55; i++) {
+					// 	domConst.place(rows[i%2 + 1].cloneNode(true), 'tbody');
+					// }
+				},
+				runTest: function() {
+					oldParser._clearCache();
+					oldParser.parse('scan');
+				}
+			}, {
+				name: 'dojox/mobile/parser - scan() with no widgets',
+				testType: 'perf',
+				trialIterations: 20,
+				setUp: function() {
+					dom.byId('status').innerHTML = 'dojox/mobile/parser - Running scan() with no widgets test...';
+					// var rows = query('tr', 'tbody');
+					// for (var i = 0; i < 55; i++) {
+					// 	domConst.place(rows[i%2 + 1].cloneNode(true), 'tbody');
+					// }
+				},
+				tearDown: function() {
+					domConst.empty('scan');
+				},
+				runTest: function() {
+					mobileParser._clear();
+					mobileParser.parse(dom.byId('scan'));
+				}
+			}, {
+				name: 'parser - scan() with lots of widgets',
 				testType: 'perf',
 				trialIterations: 20,
 				setUp: function () {
-					dom.byId('status').innerHTML = 'Running scan() with lots of widgets test...';
+					dom.byId('status').innerHTML = 'parser - Running scan() with lots of widgets test...';
 					generateDom([
 						'<div data-dojo-type="TabContainer"></div>',
 						'<div data-dojo-type="TabContainer"></div>',
@@ -117,6 +149,106 @@
 				runTest: function () {
 					parser._clear();
 					parser.parse(dom.byId('scan'));
+				}
+			}, {
+				name: 'dojo/parser - scan() with lots of widgets',
+				testType: 'perf',
+				trialIterations: 20,
+				setUp: function () {
+					dom.byId('status').innerHTML = 'dojo/parser - Running scan() with lots of widgets test...';
+					generateDom([
+						'<div data-dojo-type="TabContainer"></div>',
+						'<div data-dojo-type="TabContainer"></div>',
+						'<div></div>',
+						'<input type="text" data-dojo-type="TextBox" strProp1="name"/>'
+					], 4, 'scan');
+				},
+				tearDown: function () {
+					domConst.empty('scan');
+				},
+				runTest: function () {
+					oldParser._clearCache();
+					oldParser.parse(dom.byId('scan'));
+				}
+			}, {
+				name: 'dojox/mobile/parser - scan() with lots of widgets',
+				testType: 'perf',
+				trialIterations: 20,
+				setUp: function () {
+					dom.byId('status').innerHTML = 'dojox/mobile/parser - Running scan() with lots of widgets test...';
+					generateDom([
+						'<div data-dojo-type="TabContainer"></div>',
+						'<div data-dojo-type="TabContainer"></div>',
+						'<div></div>',
+						'<input type="text" data-dojo-type="TextBox" strProp1="name"/>'
+					], 4, 'scan');
+				},
+				tearDown: function () {
+					domConst.empty('scan');
+				},
+				runTest: function () {
+					mobileParser._clear();
+					mobileParser.parse(dom.byId('scan'));
+				}
+			}, {
+				name: "parser - scan() with lots of widgets but _stopParser",
+				testType: "perf",
+				trialIterations: 20,
+				setUp: function(){
+					dom.byId('status').innerHTML = 'parser - Running scan() with lots of widgets and _stopParser test...';
+					generateDom([
+						'<div data-dojo-type="TabContainer"></div>',
+						'<div data-dojo-type="ContentPane"></div>',
+						'<div></div>',
+						'<input data-dojo-type="TextBox" strProp1="name"/>'
+					], 4, 'scan');
+				},
+				tearDown: function(){
+					domConst.empty('scan');
+				},
+				runTest: function(){
+					parser._clear();
+					parser.parse(dom.byId('scan'));
+				}
+			}, {
+				name: "dojo/parser - scan() with lots of widgets but _stopParser",
+				testType: "perf",
+				trialIterations: 20,
+				setUp: function(){
+					dom.byId('status').innerHTML = 'dojo/parser - Running scan() with lots of widgets and _stopParser test...';
+					generateDom([
+						'<div data-dojo-type="TabContainer"></div>',
+						'<div data-dojo-type="ContentPane"></div>',
+						'<div></div>',
+						'<input data-dojo-type="TextBox" strProp1="name"/>'
+					], 4, 'scan');
+				},
+				tearDown: function(){
+					domConst.empty('scan');
+				},
+				runTest: function(){
+					oldParser._clearCache();
+					oldParser.parse(dom.byId('scan'));
+				}
+			}, {
+				name: "dojox/mobile/parser - scan() with lots of widgets but _stopParser",
+				testType: "perf",
+				trialIterations: 20,
+				setUp: function(){
+					dom.byId('status').innerHTML = 'dojox/mobile/parser - Running scan() with lots of widgets and _stopParser test...';
+					generateDom([
+						'<div data-dojo-type="TabContainer"></div>',
+						'<div data-dojo-type="ContentPane"></div>',
+						'<div></div>',
+						'<input data-dojo-type="TextBox" strProp1="name"/>'
+					], 4, 'scan');
+				},
+				tearDown: function(){
+					domConst.empty('scan');
+				},
+				runTest: function(){
+					mobileParser._clear();
+					mobileParser.parse(dom.byId('scan'));
 				}
 			}
 		]);

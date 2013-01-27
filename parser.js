@@ -6,11 +6,12 @@ define([
 	'dojo/aspect', // aspect.before, aspect.around, aspect.after
 	'dojo/Deferred', // Deferred
 	'dojo/dom', // dom.byId
+	'dojo/has', // has.add, has()
 	'dojo/on', // on
 	'dojo/promise/all', // all
 	'dojo/when', // when
 	'dojo/domReady!'
-], function (require, debug, lang, win, aspect, Deferred, dom, on, all, when) {
+], function (require, debug, lang, win, aspect, Deferred, dom, has, on, all, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser
 	/*jshint evil:true */
@@ -58,6 +59,8 @@ define([
 		}
 		return ctorMap[ts];
 	}
+
+	var uid = 0;
 
 	function promiseRequire(mids, contextRequire) {
 		// summary:
@@ -385,8 +388,7 @@ define([
 			// summary:
 			//		Scan the DOM for decorated nodes that should be instantiated as Objects as well as `<script>`
 			//		blocks that indicate modules that should be required.  It returns a promise that is fulfilled with
-			//		an array of Objects that contain information about how the nodes should be
-			//		instantiated.
+			//		an array of Objects that contain information about how the nodes should be instantiated.
 			// rootNode: DOMNode?
 			//		The DOMNode that should serve as the base for the scan.  If null or undefined, defaults to the
 			//		body of the window.
@@ -404,21 +406,21 @@ define([
 			}
 
 			// an array that may contain declarative require promises
-			var dr = [];
+			var dr;
 
 			if (!options.noDeclarativeRequire) {
 				// select node that are ``<script type="dojo/require">``
-				qSA('script[type="dojo/require"]', rootNode).forEach(function (script) {
-					// require in the modules inside the script object
-					dr.push(declarativeRequire(script, options.contextRequire));
-
+				dr = qSA('script[type="dojo/require"]', rootNode).map(function (script) {
 					// remove the node from the DOM so it isn't seen again
 					script.parentNode.removeChild(script);
+
+					// require in the modules inside the script object
+					return declarativeRequire(script, options.contextRequire);
 				});
 			}
 
-			return when(dr.length ? all(dr) : true).then(function () {
-				var objects = [],
+			return when(dr && dr.length ? all(dr) : true).then(function () {
+				var objects = {},
 					mids = [],
 					midHash = {};
 
@@ -441,17 +443,50 @@ define([
 						});
 					}
 
-					objects.push({
+					// Generate a unique ID for each node we "see" to make it easier to access the nodes.
+					// IE supports uniqueID, but we have to generate for other browsers.
+					node.__uid = node.__uid || node.uniqueID || uid++;
+
+					objects[node.__uid] = {
 						node: node,
 						types: types,
-						ctor: ctor
-					});
+						ctor: ctor,
+						instantiate: true
+					};
 				});
 
 				return when(options.noAutoRequire ? objects : promiseRequire(mids, options.contextRequire)
-					.then(function () {
+					.then(function (modules) {
+						// Attempt to find constructors for modules after an auto-require
+						if (modules.length) {
+							var uid, obj;
+							for (uid in objects) {
+								obj = objects[uid];
+								try {
+									obj.ctor = obj.ctor || getCtor(obj.types, options.contextRequire);
+								} catch (e) {}
+							}
+						}
 						return objects;
-					}));
+					})).then(function (objects) {
+						// Iterate through all the objects, and with those who have a constructor with a `stopParser`
+						// flag = `true`, remove them the list of objects.
+						var uid, obj,
+							o = [];
+						for (uid in objects) {
+							obj = objects[uid];
+							if (!(options.template) && obj.ctor && obj.ctor.prototype &&
+									obj.ctor.prototype.stopParser) {
+								qSA('[' + typeAttribute + ']', obj.node).forEach(function (node) {
+									objects[node.__uid].instantiate = false;
+								});
+							}
+							o.push(obj);
+						}
+						return o.filter(function (obj) {
+							return obj.instantiate;
+						});
+					});
 			});
 		},
 

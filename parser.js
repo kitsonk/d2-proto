@@ -277,6 +277,12 @@ define([
 					props.dojoAttachEvent = dojoAttachEvent;
 				}
 
+				// Handling of special node attributes
+				props['class'] = obj.node.className;
+				if (!props.style) {
+					obj.node.style.cssText;
+				}
+
 				// Items from the data-dojo-props overrides anything derived from the attributes
 				if (propsAttr) {
 					props = lang.mixin(props, convertPropsString(propsAttr));
@@ -342,7 +348,10 @@ define([
 					});
 				}
 
-				var instance = new obj.ctor(props, obj.node);
+				// If a constructor has an adaptor function, this will be used to return an instance of the object
+				var adaptor = obj.ctor.adaptor || (obj.proto && obj.proto.adaptor);
+
+				var instance = adaptor ? adaptor(props, obj.node, obj.ctor) : new obj.ctor(props, obj.node);
 
 				// Add the instance to the global scope if jsID attribute is set
 				var jsId = obj.node.getAttribute(jsIdAttribute);

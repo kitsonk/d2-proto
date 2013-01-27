@@ -22,6 +22,11 @@ The following modules are of interest in this repository:
 Also, until `teststack` is feature complete, there are some additional tests based off of D.O.H. in the `tests` folder,
 with the experimental `teststack` tests in `test`.
 
+Some of the tests require the following:
+
+* [dijit](/dojo/dijit) 1.8+
+* [dojox](/dojo/dojox) 1.8+
+
 ## Documentation
 
 Experimental documentation is available [here](d2-proto/blob/master/docs/index.md).

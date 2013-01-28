@@ -10,6 +10,10 @@ The following modules are of interest in this repository:
 
 * [d2-proto/parser](d2-proto/blob/master/parser.js) - A "modern" version of the ``dojo/parser``.  It is intended to only
   support ES5 compliant user agents.  A demonstration test can be found [here](d2-proto/blob/master/test/parser.html).
+* [d2-proto/lang](d2-proto/blob/master/lang.js) - Some enhancements changes to the ``dojo/_base/lang`` that are designed
+  to behave better in an ES5 world.
+* [d2-proto/compose](d2-proto/blob/master/compose.js) - A Object compositing and prototyping utility based on
+  [ComposeJS][compose], a potential alternative to `dojo/_base/declare`.
 * [d2-proto/debug](d2-proto/blob/master/debug.js) - A "stub" of what might be required in a Dojo 2.0 debug API.
 
 ## Requirements
@@ -39,3 +43,5 @@ This is licensed under the ["New" BSD License](d2-proto/blob/master/LICENSE).
 
 Contributions are welcome in the form of pull requests, but must be covered under the Dojo Foundation CLA.  See
 [CONTRIBUTING.md](d2-proto/blob/master/CONTRIBUTING.md) for further information.
+
+[compose]: /kriszyp/compose

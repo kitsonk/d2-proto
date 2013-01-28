@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Demonstration: d2-proto/compose</title>
+	<style type="text/css">
+	@import "../../dijit/themes/claro/claro.css";
+	@import "../../dijit/themes/claro/document.css";
+
+	html {
+		min-height: 100%;
+	}
+
+	body {
+		padding: 1em;
+		background-image: linear-gradient(rgb(152,192,237), rgb(239,239,239) 250px);
+		background-image: -webkit-linear-gradient(rgb(152,192,237), rgb(239,239,239) 250px);
+	}
+	</style>
+	<script type="text/javascript">
+	dojoConfig = {
+		async: 1,
+		isDebug: 1,
+		pacakges: [{
+			name: "dojo",
+			location: "dojo"
+		},{
+			name: "dijit",
+			location: "dijit"
+		},{
+			name: "d2-proto",
+			location: "d2-proto"
+		}]
+	};
+	</script>
+	<script type="text/javascript" src="../../dojo/dojo.js"></script>
+	<script type="text/javascript">
+	require(["d2-proto/compose"], function(compose){
+		var MyClass = compose(function (options) {
+			console.log(options);
+		}, {
+			test: "property"
+		});
+		console.log(MyClass);
+	});
+	</script>
+</head>
+<body>
+	<h1>Demonstration: d2-proto/compose</h1>
+</body>
+</html>

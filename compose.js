@@ -1,8 +1,7 @@
 define([
-	'dojo/has',
 	'./lang', // lang.delegate
 	'./debug' // debug.error
-], function (has, lang, debug) {
+], function (lang, debug) {
 	'use strict';
 
 	function isInMethodChain(method, name, prototypes) {

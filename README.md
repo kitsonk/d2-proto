@@ -22,6 +22,7 @@ The following modules are of interest in this repository:
 
 * [dojo](/dojo/dojo) 1.8+
 * [dojo2-teststack](/csnover/dojo2-teststack) - for unit testing
+* [chai][http://chaijs.com] - for unit testing assertion
 
 Also, until `teststack` is feature complete, there are some additional tests based off of D.O.H. in the `tests` folder,
 with the experimental `teststack` tests in `test`.

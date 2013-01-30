@@ -1,12 +1,14 @@
 define([
 	'teststack!tdd',
-	'teststack/lib/assert',
+	'chai/chai',
 	'../lang'
-], function (test, assert, lang) {
+], function (test, chai, lang) {
+
+	var assert = chai.assert;
 
 	test.suite('mixin', function () {
 		test.test('basic', function () {
-			assert.isEqual(typeof lang.mixin, 'function', 'mixin present');
+			assert(typeof lang.mixin === 'function', 'mixin present');
 
 			var o1 = {
 					foo: 'bar'
@@ -16,10 +18,10 @@ define([
 				};
 
 			lang.mixin(o1, o2);
-			assert.isEqual(o1.foo, 'bar', 'original value unchanged');
-			assert.isEqual(o1.baz, 'qat', 'mixed in value present');
-			assert.f(o2.foo, 'no value for foo in source');
-			assert.isEqual(o2.baz, 'qat', 'no change in value in source');
+			assert(o1.foo === 'bar', 'original value unchanged');
+			assert(o1.baz === 'qat', 'mixed in value present');
+			assert(!o2.foo, 'no value for foo in source');
+			assert(o2.baz === 'qat', 'no change in value in source');
 		});
 		test.test('overwrite', function () {
 			var o3 = {
@@ -30,8 +32,8 @@ define([
 				};
 
 			lang.mixin(o3, o4);
-			assert.isEqual(o3.foo, 'qat', 'original value changed');
-			assert.isEqual(o4.foo, 'qat', 'source value unchanged');
+			assert(o3.foo === 'qat', 'original value changed');
+			assert(o4.foo === 'qat', 'source value unchanged');
 		});
 	});
 

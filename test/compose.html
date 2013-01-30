@@ -29,18 +29,29 @@
 		},{
 			name: "d2-proto",
 			location: "d2-proto"
+		},{
+			name: "compose",
+			location: "compose"
 		}]
 	};
 	</script>
 	<script type="text/javascript" src="../../dojo/dojo.js"></script>
 	<script type="text/javascript">
-	require(["d2-proto/compose"], function(compose){
+	require(["d2-proto/compose", "compose/compose"], function(compose, Compose){
 		var MyClass = compose(function (options) {
 			console.log(options);
 		}, {
 			test: "property"
 		});
-		console.log(MyClass);
+
+		var MyOtherClass = Compose(function (options) {
+			console.log(options);
+		}, {
+			test: "property"
+		});
+		// console.log(MyClass);
+		new MyOtherClass();
+		new MyClass();
 	});
 	</script>
 </head>

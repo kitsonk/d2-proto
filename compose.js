@@ -3,6 +3,7 @@ define([
 	'./lang', // lang.delegate
 	'./debug' // debug.error
 ], function (has, lang, debug) {
+	'use strict';
 
 	function isInMethodChain(method, name, prototypes) {
 		// summary:
@@ -40,14 +41,14 @@ define([
 					if (argGetBases) {
 						iterate(argGetBases(prototypeFlag));	// don't need to check children for these, they should
 																// be pre-flattened
-					}
-				} else {
-					for (var j = 0; j < bases.length; j++) {
-						if (target === bases[j]) {
-							continue outer;
+					} else {
+						for (var j = 0; j < bases.length; j++) {
+							if (target === bases[j]) {
+								continue outer;
+							}
 						}
+						bases.push(target);
 					}
-					bases.push(target);
 				}
 			}
 		}
@@ -157,6 +158,7 @@ define([
 				}
 			}
 		}
+		return dest;
 	}
 
 	var compose = function (base, extensions) {
@@ -169,13 +171,17 @@ define([
 		//		Additional constructor functions or objects to be composited into the base
 		// returns: Object
 		//		The composited object class, which can be instantiated with `new`
-		var args = Array.prototype.slice.call(arguments, 1); // Convert arguments into an array, skipping the first
-		var proto = (args.length && typeof base !== 'function') ? base :
-			mixin.apply(this, [lang.delegate(validArg(base))].concat(args));
+		var args = arguments;
+		var proto = (args.length < 2 && typeof args[0] !== 'function') ? args[0] :
+			mixin.apply(this, [lang.delegate(validArg(base))].concat(Array.prototype.slice.call(arguments, 1)));
 
-		var constructors = getBases(arguments),
+		if (typeof args[args.length - 1] === 'object') {
+			args[args.length - 1] = proto;
+		}
+
+		var constructors = getBases(args),
 			constructorsLength = constructors.length,
-			prototypes = getBases(arguments, true);
+			prototypes = getBases(args, true);
 
 		function Constructor() {
 			var instance = (this instanceof Constructor) ? this : Object.create(proto);
@@ -196,11 +202,13 @@ define([
 		Object.defineProperty(Constructor, '_getBases', {
 			value: function (prototypeFlag) {
 				return prototypeFlag ? prototypes : constructors;
-			}
+			},
+			enumerable: true
 		});
 
 		Object.defineProperty(Constructor, 'extend', {
-			value: extend
+			value: extend,
+			enumerable: true
 		});
 
 		if (!compose.secure) {
@@ -208,6 +216,7 @@ define([
 		}
 
 		Constructor.prototype = proto;
+
 		return Constructor;
 	};
 
@@ -278,6 +287,30 @@ define([
 		enumerable: true
 	});
 
+	Object.defineProperty(compose, 'from', {
+		value: function (trait, fromKey) {
+			if (fromKey) {
+				return (typeof trait === 'function' ? trait.prototype : trait)[fromKey];
+			}
+		},
+		enumerable: true
+	});
+
+	Object.defineProperty(compose, 'create', {
+		value: function (base) {
+			var instance = mixin(lang.delegate(base), Array.prototype.slice.call(arguments, 1)),
+				arg;
+			for (var i = 0, l = arguments.length; i < l; i++) {
+				arg = arguments[i];
+				if (typeof arg === 'function') {
+					instance = arg.call(instance) || instance;
+				}
+			}
+			return instance;
+		},
+		enumerable: true
+	});
+
 	Object.defineProperty(compose, 'apply', {
 		value: function (self, args) {
 			return self ? mixin(self, args) : extend.apply.call(compose, 0, args);
@@ -288,6 +321,12 @@ define([
 		value: function (self) {
 			return mixin(self, Array.prototype.slice.call(arguments, 1));
 		}
+	});
+
+	Object.defineProperty(compose, 'secure', {
+		value: false,
+		writable: true,
+		enumerable: true
 	});
 
 	return compose;

@@ -2,37 +2,19 @@ define([
 	'dojo/has'
 ], function (has) {
 
-	// Determines if Object.defineProperty is supported by the user agent
-	has.add('es5-defineProperty', 'defineProperty' in Object);
-
-	// Determines if Object.create is supported by the user agent
-	has.add('es5-create', 'create' in Object);
-
 	function _mixin(dest, source) {
 		// summary:
 		//		Copies/adds all visible properties of source into dest, leveraging ES5 defineProperty
-		if (has('es5-defineProperty')) {
-			// This is a safer way to ensure mixin works properly under ES5, because it will copy any getters
-			// and setters properly
-			var keys = Object.keys(source);
-			for (var i = 0, l = keys.length; i < l; i++) { // For-loop faster than .forEach()
-				Object.defineProperty(dest, keys[i], Object.getOwnPropertyDescriptor(source, keys[i]));
-			}
-			Object.keys(source).forEach(function (name) {
-				Object.defineProperty(dest, name, Object.getOwnPropertyDescriptor(source, name));
-			});
-		} else {
-			var name, s, empty = {};
-			for (name in source) {
-				// the (!(name in empty) || empty[name] !== s) condition avoids copying properties in "source"
-				// inherited from Object.prototype.	 For example, if dest has a custom toString() method,
-				// don't overwrite it with the toString() method that source inherited from Object.prototype
-				s = source[name];
-				if (!(name in dest) || (dest[name] !== s && (!(name in empty) || empty[name] !== s))) {
-					dest[name] = s;
-				}
-			}
+
+		// This is a safer way to ensure mixin works properly under ES5, because it will copy any getters
+		// and setters properly
+		var keys = Object.keys(source); // TODO: only handles "own" properties
+		for (var i = 0, l = keys.length; i < l; i++) { // For-loop faster than .forEach()
+			Object.defineProperty(dest, keys[i], Object.getOwnPropertyDescriptor(source, keys[i]));
 		}
+		Object.keys(source).forEach(function (name) {
+			Object.defineProperty(dest, name, Object.getOwnPropertyDescriptor(source, name));
+		});
 	}
 
 	return {
@@ -83,22 +65,10 @@ define([
 			return dest; // Object
 		},
 
-		delegate: has('es5-create') ? function (obj, props) {
+		delegate: function (obj, props) {
 			var d = Object.create(typeof obj === 'function' ? obj.prototype : obj || Object.prototype);
 			return props ? _mixin(d, props) : d;
-		} : (function () {
-			// boodman/crockford delegation w/ cornford optimization
-			function TMP() {}
-			return function (obj, props) {
-				TMP.prototype = obj;
-				var tmp = new TMP();
-				TMP.prototype = null;
-				if (props) {
-					_mixin(tmp, props);
-				}
-				return tmp; // Object
-			};
-		})()
+		},
 
 		/*=====
 		delegate: function(obj, props){

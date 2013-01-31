@@ -107,7 +107,7 @@ define([
 					value = propertyDescriptor.value;
 					own = proto.hasOwnProperty(name);
 					if (typeof value === 'function' && name in dest && value !== dest[name]) {
-						var existing = Object.getOwnPropertyDescriptor(dest, name).value;
+						var existing = dest[name];
 						if (value === required) {
 							value = existing; // It is a required value, which is being supplied, so now fulfilled
 						} else if (!own) {
@@ -225,20 +225,21 @@ define([
 	});
 
 	function decorator(install, direct) {
-		function d() {
+		function Decorator() {
 			if (direct) {
 				return direct.apply(this, arguments);
 			}
 			throw new Error('Decorator not applied');
 		}
-		Object.defineProperty(d, 'install', {
+		Object.defineProperty(Decorator, 'install', {
 			value: install
 		});
-		return d;
+		return Decorator;
 	}
 
-	Object.defineProperty(compose, 'decorator', {
-		value: decorator
+	Object.defineProperty(compose, 'Decorator', {
+		value: decorator,
+		enumerable: true
 	});
 
 	function aspect(handler) {
@@ -287,17 +288,24 @@ define([
 	});
 
 	Object.defineProperty(compose, 'from', {
+		// TODO: Use Object.defineProperty, likely need to always return a decorator
 		value: function (trait, fromKey) {
 			if (fromKey) {
 				return (typeof trait === 'function' ? trait.prototype : trait)[fromKey];
 			}
+			return decorator(function (key) {
+				if (!(this[key] = (typeof trait === 'string' ? this[trait] :
+					(typeof trait === 'function' ? trait.prototype : trait)[fromKey || key]))) {
+					throw new Error('Source method ' + fromKey + ' was not available to be renamed to ' + key);
+				}
+			});
 		},
 		enumerable: true
 	});
 
 	Object.defineProperty(compose, 'create', {
 		value: function (base) {
-			var instance = mixin(lang.delegate(base), Array.prototype.slice.call(arguments, 1)),
+			var instance = mixin.apply(this, [lang.delegate(base)].concat(Array.prototype.slice.call(arguments, 1))),
 				arg;
 			for (var i = 0, l = arguments.length; i < l; i++) {
 				arg = arguments[i];

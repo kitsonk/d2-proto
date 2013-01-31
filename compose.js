@@ -287,6 +287,14 @@ define([
 		enumerable: true
 	});
 
+	Object.defineProperty(compose, 'property', {
+		value: function (descriptor) {
+			return new compose.Decorator(function (key) {
+				Object.defineProperty(this, key, descriptor);
+			});
+		}
+	});
+
 	Object.defineProperty(compose, 'from', {
 		// TODO: Use Object.defineProperty, likely need to always return a decorator
 		value: function (trait, fromKey) {

@@ -9,10 +9,9 @@ define([
 	var required = compose.required,
 		around = compose.around,
 		from = compose.from,
-		create = compose.create,
 		Widget, MessageWidget, SpanishWidget;
 
-	test.suite('compose', function () {
+	test.suite('compose core functionality', function () {
 		test.test('compose', function () {
 			Widget = compose({
 				render: function (node) {
@@ -416,6 +415,46 @@ define([
 			var widget = new SubWidget();
 			widget.render();
 			assert.deepEqual(order, ['sub render']);
+		});
+	});
+
+	test.suite('compose with ES5 properties', function () {
+		var property = compose.property;
+		test.test('basic property installer', function () {
+			var PropertyWidget = compose(Widget, {
+				foo: property({
+					value: 'bar'
+				})
+			});
+
+			var widget = new PropertyWidget();
+			assert.equal(widget.foo, 'bar', 'widget.foo');
+			assert.deepEqual(Object.keys(widget), [], 'no enumerable owned properties');
+		});
+		test.test('accessors', function () {
+			var fooValue = 'bar',
+				getCall = 0,
+				setCall = 0,
+				AccessorWidget = compose(Widget, {
+					foo: property({
+						get: function () {
+							getCall++;
+							return fooValue;
+						},
+						set: function (value) {
+							setCall++;
+							fooValue = value;
+						}
+					})
+				});
+
+			var widget = new AccessorWidget();
+			assert.equal(widget.foo, 'bar', 'widget.foo');
+			widget.foo = 'baz';
+			assert.equal(widget.foo, 'baz', 'widget.foo');
+			assert.equal(getCall, 2, 'getCall');
+			assert.equal(setCall, 1, 'setCall');
+			assert.equal(fooValue, 'baz', 'fooValue');
 		});
 	});
 

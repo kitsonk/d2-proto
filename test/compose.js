@@ -429,6 +429,7 @@ define([
 
 			var widget = new PropertyWidget();
 			assert.equal(widget.foo, 'bar', 'widget.foo');
+			widget.foo = 'qat';
 			assert.deepEqual(Object.keys(widget), [], 'no enumerable owned properties');
 		});
 		test.test('accessors', function () {

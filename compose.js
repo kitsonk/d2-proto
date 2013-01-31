@@ -289,7 +289,7 @@ define([
 
 	Object.defineProperty(compose, 'property', {
 		value: function (descriptor) {
-			return new compose.Decorator(function (key) {
+			return decorator(function (key) {
 				Object.defineProperty(this, key, descriptor);
 			});
 		}

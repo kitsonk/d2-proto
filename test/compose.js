@@ -98,7 +98,7 @@ define([
 
 			assert.throws(function () {
 				widget.render();
-			}, 'throws a conflicted error');
+			}, 'Property \'render\' of object #<Constructor> is not a function');
 
 			widget = new SpanishWidgetRenderer(node);
 			widget.render();
@@ -309,6 +309,7 @@ define([
 					baseCallCount++;
 				}, {
 					foo: function () {
+						console.log('Base.foo');
 						fooCallCount++;
 					}
 				}),
@@ -316,6 +317,7 @@ define([
 					sub1CallCount++;
 				}, {
 					foo: compose.after(function () {
+						console.log('Sub1.foo');
 						fooSub1Count++;
 					})
 				}),
@@ -323,6 +325,7 @@ define([
 					sub2CallCount++;
 				}, {
 					foo: compose.after(function () {
+						console.log('Sub2.foo');
 						fooSub2Count++;
 					})
 				}),

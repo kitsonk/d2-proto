@@ -41,35 +41,31 @@
 	<script type="text/javascript">
 	require(["d2-proto/compose"], function(compose){
 		var property = compose.property;
-		var PropertyWidget = compose(function (node) {
-			if (node) {
-				this.node = node;
-			}
+		var nodeValue;
+		var fooValue = 'bar';
+		var Widget = compose(function (node) {
+			this.node = node;
 		}, {
 			node: property({
 				enumerable: true,
-				writable: true
+				get: function() {
+					return nodeValue;
+				},
+				set: function(value) {
+					nodeValue = value;
+				}
 			}),
 			foo: property({
-				enumerable: false,
+				enumerable: true,
+				value: 'bar',
 				writable: true
 			})
 		});
 
-		for(var key in PropertyWidget){
-			console.log(key, Object.hasOwnProperty(PropertyWidget, key));
-		}
-		console.log(Object.getOwnPropertyNames(PropertyWidget, key));
-		var widget = new PropertyWidget();
-		for(var key in widget){
-			console.log(key, Object.hasOwnProperty(widget, key));
-		}
-		console.log(Object.getOwnPropertyNames(widget));
-		var proto = Object.getPrototypeOf(widget);
-		for(var key in proto){
-			console.log(key, Object.hasOwnProperty(proto));
-		}
-		console.log(Object.getOwnPropertyNames(proto));
+		var node = {},
+			widget = new Widget(node);
+
+		console.log(Object.keys(widget));
 	});
 	</script>
 </head>

@@ -34,7 +34,7 @@ define([
 			outer:
 			for (var i = 0; i < args.length; i++) {
 				var arg = args[i],
-					target = prototypeFlag && typeof arg === 'function' ? arg.prototype : arg;
+					target = prototypeFlag && typeof arg === 'function' ? Object.getPrototypeOf(arg) : arg;
 				if (prototypeFlag || typeof arg === 'function') {
 					var argGetBases = checkChildren && arg._getBases;
 					if (argGetBases) {
@@ -92,6 +92,19 @@ define([
 		// returns: Object
 		//		The composite of the sources mixed in
 
+		function defineProperty(obj, name, value, propertyDescriptor) {
+			if (!(propertyDescriptor && (propertyDescriptor.get || propertyDescriptor.set))) {
+				// propertyDescriptor is data descriptor or not present
+				propertyDescriptor = propertyDescriptor || { // configure default descriptor to match direct assignment
+					enumerable: true,
+					configurable: true,
+					writable: true
+				};
+				propertyDescriptor.value = value;
+			}
+			Object.defineProperty(obj, name, propertyDescriptor);
+		}
+
 		var args = Array.prototype.slice.call(arguments, 1), // Convert arguments into an array, skipping the first
 			name, propertyDescriptor, value, own;
 		for (var i = 0, l = args.length; i < l; i++) {
@@ -130,13 +143,7 @@ define([
 						value.install.call(dest, name);
 					} else {
 						// defineProperty with propertyDescriptor on destination
-						propertyDescriptor = propertyDescriptor || { // create property descriptor if not available
-							enumerable: true,
-							writable: true,
-							configurable: true
-						};
-						propertyDescriptor.value = value;
-						Object.defineProperty(dest, name, propertyDescriptor);
+						defineProperty(dest, name, value, propertyDescriptor);
 					}
 				}
 			} else {
@@ -155,13 +162,7 @@ define([
 							continue;
 						}
 					}
-					propertyDescriptor = propertyDescriptor || {
-						enumerable: true,
-						writable: true,
-						configurable: true
-					};
-					propertyDescriptor.value = value;
-					Object.defineProperty(dest, name, propertyDescriptor);
+					defineProperty(dest, name, value, propertyDescriptor);
 				}
 			}
 		}
@@ -203,14 +204,20 @@ define([
 					}
 				}
 			}
+			for (var name in proto) {
+				// accessor properties are not copied properly as own from prototype, this resolves that issue
+				var propertyDescriptor = Object.getOwnPropertyDescriptor(proto, name);
+				if (propertyDescriptor && (propertyDescriptor.get || propertyDescriptor.set)) {
+					Object.defineProperty(instance, name, propertyDescriptor);
+				}
+			}
 			return instance;
 		}
 
 		Object.defineProperty(Constructor, '_getBases', {
 			value: function (prototypeFlag) {
 				return prototypeFlag ? prototypes : constructors;
-			},
-			enumerable: true
+			}
 		});
 
 		Object.defineProperty(Constructor, 'extend', {
@@ -219,7 +226,9 @@ define([
 		});
 
 		if (!compose.secure) {
-			proto.constructor = Constructor;
+			Object.defineProperty(proto, 'constructor', {
+				value: Constructor
+			});
 		}
 
 		Constructor.prototype = proto;
@@ -306,14 +315,16 @@ define([
 	});
 
 	Object.defineProperty(compose, 'from', {
-		// TODO: Use Object.defineProperty, likely need to always return a decorator
 		value: function (trait, fromKey) {
-			if (fromKey) {
-				return (typeof trait === 'function' ? trait.prototype : trait)[fromKey];
-			}
+			var descriptor = fromKey ? Object.getOwnPropertyDescriptor((typeof trait === 'function' ?
+				trait.prototype : trait), fromKey) : null;
 			return decorator(function (key) {
-				if (!(this[key] = (typeof trait === 'string' ? this[trait] :
-					(typeof trait === 'function' ? trait.prototype : trait)[fromKey || key]))) {
+				descriptor = descriptor || (typeof trait === 'string' ? Object.getOwnPropertyDescriptor(this, trait) :
+					Object.getOwnPropertyDescriptor((typeof trait === 'function' ? trait.prototype : trait),
+						fromKey || key));
+				if (descriptor) {
+					Object.defineProperty(this, key, descriptor);
+				} else {
 					throw new Error('Source method ' + fromKey + ' was not available to be renamed to ' + key);
 				}
 			});

@@ -95,19 +95,19 @@ define([
 		var args = Array.prototype.slice.call(arguments, 1), // Convert arguments into an array, skipping the first
 			name, propertyDescriptor, value, own;
 		for (var i = 0, l = args.length; i < l; i++) {
-			var arg = args[i],
-				keys, j, m;
+			var arg = args[i];
 			if (typeof arg === 'function') {
 				// Argument is a function, utilise the prototype to mixin
 				var proto = arg.prototype;
-				keys = Object.keys(proto); // Assuming enumerable only properties of the prototype
-				for (j = 0, m = keys.length; j < m; j++) {
-					name = keys[j];
+				for (name in proto) {
+					// iterate through enumerable properties (owned and unowned)
 					propertyDescriptor = Object.getOwnPropertyDescriptor(proto, name);
-					value = propertyDescriptor.value;
+					// non-owned properties don't return a property descriptor
+					value = propertyDescriptor ? propertyDescriptor.value : proto[name];
 					own = proto.hasOwnProperty(name);
 					if (typeof value === 'function' && name in dest && value !== dest[name]) {
 						var existing = dest[name];
+						propertyDescriptor = Object.getOwnPropertyDescriptor(dest, name) || propertyDescriptor;
 						if (value === required) {
 							value = existing; // It is a required value, which is being supplied, so now fulfilled
 						} else if (!own) {
@@ -116,7 +116,7 @@ define([
 							if (isInMethodChain(value, name, getBases(args, true))) {
 								// This value is in the existing method's override chain, we can use the existing
 								// method
-								value = existing;
+								value = existing.value;
 							} else if (!isInMethodChain(existing, name, getBases([arg], true))) {
 								// The existing method is not in the current override chain, so we are left with a
 								// conflict
@@ -130,17 +130,20 @@ define([
 						value.install.call(dest, name);
 					} else {
 						// defineProperty with propertyDescriptor on destination
+						propertyDescriptor = propertyDescriptor || { // create property descriptor if not available
+							enumerable: true,
+							writable: true,
+							configurable: true
+						};
 						propertyDescriptor.value = value;
 						Object.defineProperty(dest, name, propertyDescriptor);
 					}
 				}
 			} else {
 				// Argument should be an Object, mixin properties looking for modifiers
-				keys = Object.keys(validArg(arg));
-				for (j = 0, m = keys.length; j < m; j++) {
-					name = keys[j];
+				for (name in validArg(arg)) {
 					propertyDescriptor = Object.getOwnPropertyDescriptor(arg, name);
-					value = propertyDescriptor.value;
+					value = propertyDescriptor ? propertyDescriptor.value : arg[name];
 					if (typeof value === 'function') {
 						if (value.install) {
 							// apply modifier
@@ -152,6 +155,11 @@ define([
 							continue;
 						}
 					}
+					propertyDescriptor = propertyDescriptor || {
+						enumerable: true,
+						writable: true,
+						configurable: true
+					};
 					propertyDescriptor.value = value;
 					Object.defineProperty(dest, name, propertyDescriptor);
 				}
@@ -254,7 +262,8 @@ define([
 	var stop = {};
 
 	Object.defineProperty(compose, 'stop', {
-		value: stop
+		value: stop,
+		enumerable: true
 	});
 
 	Object.defineProperty(compose, 'around', {
@@ -292,7 +301,8 @@ define([
 			return decorator(function (key) {
 				Object.defineProperty(this, key, descriptor);
 			});
-		}
+		},
+		enumerable: true
 	});
 
 	Object.defineProperty(compose, 'from', {

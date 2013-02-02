@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Demonstration: d2-proto/compose</title>
+	<style type="text/css">
+	@import "../../dijit/themes/claro/claro.css";
+	@import "../../dijit/themes/claro/document.css";
+
+	html {
+		min-height: 100%;
+	}
+
+	body {
+		padding: 1em;
+		background-image: linear-gradient(rgb(152,192,237), rgb(239,239,239) 250px);
+		background-image: -webkit-linear-gradient(rgb(152,192,237), rgb(239,239,239) 250px);
+	}
+	</style>
+	<script type="text/javascript">
+
+	function clickMe(e){
+		console.log("clicked");
+	}
+
+	dojoConfig = {
+		async: 1,
+		isDebug: 1,
+		pacakges: [{
+			name: "dojo",
+			location: "dojo"
+		},{
+			name: "dijit",
+			location: "dijit"
+		},{
+			name: "d2-proto",
+			location: "d2-proto"
+		}]
+	};
+	</script>
+	<script type="text/javascript" src="../../dojo/dojo.js"></script>
+	<script type="text/javascript">
+	require(["d2-proto/compose"], function(compose){
+		var property = compose.property;
+		var PropertyWidget = compose(function (node) {
+			if (node) {
+				this.node = node;
+			}
+		}, {
+			node: property({
+				enumerable: true,
+				writable: true
+			}),
+			foo: property({
+				enumerable: false,
+				writable: true
+			})
+		});
+
+		for(var key in PropertyWidget){
+			console.log(key, Object.hasOwnProperty(PropertyWidget, key));
+		}
+		console.log(Object.getOwnPropertyNames(PropertyWidget, key));
+		var widget = new PropertyWidget();
+		for(var key in widget){
+			console.log(key, Object.hasOwnProperty(widget, key));
+		}
+		console.log(Object.getOwnPropertyNames(widget));
+		var proto = Object.getPrototypeOf(widget);
+		for(var key in proto){
+			console.log(key, Object.hasOwnProperty(proto));
+		}
+		console.log(Object.getOwnPropertyNames(proto));
+	});
+	</script>
+</head>
+<body class="claro">
+	<h1>Demonstration: d2-proto/compose</h1>
+</body>

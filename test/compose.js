@@ -419,11 +419,21 @@ define([
 	});
 
 	test.suite('compose with ES5 properties', function () {
-		var property = compose.property;
+		var property = compose.property,
+			PropertyWidget;
 		test.test('basic property installer', function () {
-			var PropertyWidget = compose(Widget, {
+			PropertyWidget = compose(function (node) {
+				if (node) {
+					this.node = node;
+				}
+			}, {
+				node: property({
+					enumerable: true,
+					writable: true
+				}),
 				foo: property({
-					value: 'bar'
+					value: 'bar',
+					enumerable: true
 				})
 			});
 
@@ -432,7 +442,15 @@ define([
 			widget.foo = 'qat';
 			assert.deepEqual(Object.keys(widget), [], 'no enumerable owned properties');
 		});
-		test.test('accessors', function () {
+		test.test('enumerable properties', function () {
+			var node = {},
+				widget = new PropertyWidget(node);
+
+			widget.foo = 'qat';
+			assert.equal(widget.node, node, 'node was assigned');
+			assert.deepEqual(Object.keys(widget), ['node'], 'One enumerable owned key');
+		});
+		test.test('accessors properties', function () {
 			var fooValue = 'bar',
 				getCall = 0,
 				setCall = 0,
@@ -456,6 +474,31 @@ define([
 			assert.equal(getCall, 2, 'getCall');
 			assert.equal(setCall, 1, 'setCall');
 			assert.equal(fooValue, 'baz', 'fooValue');
+		});
+		test.test('accessors called in constructor', function () {
+			var nodeValue = null,
+				getCall = 0,
+				setCall = 0,
+				AccessorWidget = compose(function (node) {
+					this.node = node;
+				}, {
+					node: property({
+						get: function () {
+							getCall++;
+							return nodeValue;
+						},
+						set: function (value) {
+							setCall++;
+							nodeValue = value;
+						}
+					})
+				});
+
+			var node = {},
+				widget = new AccessorWidget(node);
+			assert.equal(nodeValue, node, 'node set properly');
+			assert.equal(getCall, 0, 'get was not called');
+			assert.equal(setCall, 1, 'set was called');
 		});
 	});
 

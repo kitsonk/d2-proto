@@ -308,7 +308,11 @@ define([
 	Object.defineProperty(compose, 'property', {
 		value: function (descriptor) {
 			return decorator(function (key) {
-				Object.defineProperty(this, key, descriptor);
+				var inheritedDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), key);
+				if (inheritedDescriptor) {
+					mixin(inheritedDescriptor, descriptor);
+				}
+				Object.defineProperty(this, key, inheritedDescriptor || descriptor);
 			});
 		},
 		enumerable: true

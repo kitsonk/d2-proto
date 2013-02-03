@@ -40,32 +40,50 @@
 	<script type="text/javascript" src="../../dojo/dojo.js"></script>
 	<script type="text/javascript">
 	require(["d2-proto/compose"], function(compose){
-		var property = compose.property;
-		var nodeValue;
-		var fooValue = 'bar';
+		var property = compose.property,
+			after = compose.after,
+			nodeValue,
+			getCall = 0,
+			setCall = 0;
+
+		console.log('Widget');
+
 		var Widget = compose(function (node) {
 			this.node = node;
 		}, {
 			node: property({
-				enumerable: true,
-				get: function() {
+				get: function () {
 					return nodeValue;
 				},
-				set: function(value) {
+				set: function (value) {
 					nodeValue = value;
-				}
-			}),
-			foo: property({
-				enumerable: true,
-				value: 'bar',
-				writable: true
+				},
+				enumerable: true
 			})
 		});
 
-		var node = {},
-			widget = new Widget(node);
+		console.log('SubWidget');
 
-		console.log(Object.keys(widget));
+		var SubWidget = compose(Widget, {
+			node: property({
+				get: after(function () {
+					getCall++;
+				}),
+				set: after(function () {
+					setCall++;
+				}),
+				enumerable: true
+			})
+		});
+
+		console.log('creation');
+
+		var widget = new SubWidget();
+		widget.node = {};
+		console.log(widget.node);
+		console.log(setCall, getCall);
+		var propertyDescriptor = Object.getOwnPropertyDescriptor(widget, 'node');
+		console.log(propertyDescriptor.get);
 	});
 	</script>
 </head>

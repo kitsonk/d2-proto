@@ -7,7 +7,9 @@ define([
 	var assert = chai.assert;
 
 	var required = compose.required,
+		before = compose.before,
 		around = compose.around,
+		after = compose.after,
 		from = compose.from,
 		Widget, MessageWidget, SpanishWidget;
 
@@ -228,17 +230,17 @@ define([
 					}
 				}),
 				SubMixin1 = compose({
-					render: compose.after(function () {
+					render: after(function () {
 						order.push(2);
 					})
 				}),
 				SubMixin2 = compose(function () {}, {
-					render: compose.after(function () {
+					render: after(function () {
 						order.push(3);
 					})
 				}),
 				Mixin = compose(SubMixin1, SubMixin2, {
-					render: compose.after(function () {
+					render: after(function () {
 						order.push(4);
 					})
 				}),
@@ -251,7 +253,7 @@ define([
 					})
 				}),
 				Button = compose(Widget, Mixin, Mixin2, function () {}, {
-					render: compose.around(function (baseRender) {
+					render: around(function (baseRender) {
 						return function () {
 							baseRender.apply(this, arguments);
 							order.push(6);
@@ -282,12 +284,12 @@ define([
 			var fooCount = 0,
 				barCount = 0,
 				Base = compose({
-					foo: compose.after(function () {
+					foo: after(function () {
 						fooCount++;
 					})
 				}),
 				Sub1 = compose(Base, {
-					bar: compose.after(function () {
+					bar: after(function () {
 						barCount++;
 					})
 				});
@@ -316,7 +318,7 @@ define([
 				Sub1 = compose(Base, function () {
 					sub1CallCount++;
 				}, {
-					foo: compose.after(function () {
+					foo: after(function () {
 						console.log('Sub1.foo');
 						fooSub1Count++;
 					})
@@ -324,7 +326,7 @@ define([
 				Sub2 = compose(Base, function () {
 					sub2CallCount++;
 				}, {
-					foo: compose.after(function () {
+					foo: after(function () {
 						console.log('Sub2.foo');
 						fooSub2Count++;
 					})
@@ -356,7 +358,7 @@ define([
 				};
 
 			var Advised = compose(obj, {
-				'foo': compose.around(function (base) {
+				'foo': around(function (base) {
 					return function () {
 						order.push(2);
 						try {
@@ -368,12 +370,12 @@ define([
 				})
 			});
 			Advised = compose(Advised, {
-				'foo': compose.after(function () {
+				'foo': after(function () {
 					order.push(5);
 				})
 			});
 			Advised = compose(Advised, {
-				'foo': compose.before(function (value) {
+				'foo': before(function (value) {
 					order.push(value);
 					return [3];
 				})
@@ -384,7 +386,7 @@ define([
 			assert.deepEqual(order, [1, 2, 3, 4, 5, 6], 'advised functions called in order');
 			order = [];
 			Advised = compose(Advised, {
-				'foo': compose.before(function () {
+				'foo': before(function () {
 					order.push(0);
 					return compose.stop;
 				})
@@ -502,6 +504,41 @@ define([
 			assert.equal(nodeValue, node, 'node set properly');
 			assert.equal(getCall, 0, 'get was not called');
 			assert.equal(setCall, 1, 'set was called');
+		});
+		test.test('accessors decorators', function () {
+			var nodeValue = null,
+				getCall = 0,
+				setCall = 0,
+				SuperWidget = compose(function (node) {
+					this.node = node;
+				}, {
+					node: property({
+						get: function () {
+							return nodeValue;
+						},
+						set: function (value) {
+							nodeValue = value;
+						}
+					})
+				}),
+				SubWidget = compose(SuperWidget, {
+					node: property({
+						get: after(function () {
+							getCall++;
+						}),
+						set: after(function () {
+							setCall++;
+						})
+					})
+				});
+
+			var node = {},
+				widget = new SubWidget(node);
+			assert.equal(nodeValue, node, 'node set properly');
+			widget.node.innerHTML = '<div>accessors rule</div>';
+			assert.equal(nodeValue.innerHTML, '<div>accessors rule</div>', 'direct property access works');
+			assert.equal(getCall, 1, 'get aspect after');
+			assert.equal(setCall, 1, 'set aspect after');
 		});
 	});
 

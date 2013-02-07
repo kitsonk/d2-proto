@@ -1,20 +1,65 @@
 define([
-	'dojo/has'
-], function (has) {
+], function () {
+	'use strict';
 
-	function _mixin(dest, source) {
+	function _mixin(dest, source, copyFunc) {
 		// summary:
-		//		Copies/adds all visible properties of source into dest, leveraging ES5 defineProperty
+		//		Copies/adds all enumerable properties of source to dest; returns dest.
+		// dest: Object
+		//		The object to which to copy/add all properties contained in source.
+		// source: Object
+		//		The object from which to draw all properties to copy into dest.
+		// copyFunc: Function?
+		//		The process used to copy/add a property in source; defaults to Object.defineProperty.
+		// returns:
+		//		dest, as modified
+		// description:
+		//		All enumerable properties, including functions (sometimes termed "methods"), excluding any non-standard
+		//		extensions found in Object.prototype, are copied/added to dest. Copying/adding each particular property
+		//		is delegated to copyFunc (if any); this defaults to Object.defineProperty if no copyFunc is provided.
+		//		Notice that by default, _mixin executes a so-called "shallow copy" and aggregate types are copied/added
+		//		by reference.
 
-		// This is a safer way to ensure mixin works properly under ES5, because it will copy any getters
-		// and setters properly
-		var keys = Object.keys(source); // TODO: only handles "own" properties
-		for (var i = 0, l = keys.length; i < l; i++) { // For-loop faster than .forEach()
-			Object.defineProperty(dest, keys[i], Object.getOwnPropertyDescriptor(source, keys[i]));
+		function getPropertyDescriptor(obj, name) {
+			// summary:
+			//		Returns a property descriptor for a property
+			// obj: Object
+			//		The root object to return the property descriptor for
+			// name: String
+			//		The name of the property to search for
+			// returns: Object
+			//		The property descriptor for the property
+			// description:
+			//		The property descriptor of the named property.  If the property is not owned by the object, it will
+			//		attempt to return the property descriptor from the prototype chain until defaulting to a property
+			//		descriptor that would match the property descriptor that would be generated via direct assignment.
+
+			return Object.getOwnPropertyDescriptor(obj, name) || (Object.getPrototypeOf(obj) ?
+				getPropertyDescriptor(Object.getPrototypeOf(obj), name) : {
+					enumerable: true,
+					configurable: true,
+					writable: true,
+					value: obj[name]
+				});
 		}
-		Object.keys(source).forEach(function (name) {
-			Object.defineProperty(dest, name, Object.getOwnPropertyDescriptor(source, name));
-		});
+
+		var name, value, empty = {};
+		for (name in source) {
+			value = source[name];
+			// the (!(name in empty) || empty[name] !== s) condition avoids copying properties in "source"
+			// inherited from Object.prototype.	 For example, if dest has a custom toString() method,
+			// don't overwrite it with the toString() method that source inherited from Object.prototype
+			if (!(name in dest) || (dest[name] !== value && (!(name in empty) || empty[name] !== value))) {
+				// If already defined in dest or if there is a copyFunc supplied, just copy the value.
+				if (copyFunc || name in dest) {
+					dest[name] = copyFunc ? copyFunc(value) : value;
+				} else {
+					Object.defineProperty(dest, name, getPropertyDescriptor(source, name));
+				}
+			}
+		}
+
+		return dest;
 	}
 
 	return {

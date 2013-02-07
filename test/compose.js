@@ -70,6 +70,7 @@ define([
 			var node = {},
 				widget = new MessageWidget(node);
 
+			console.log(widget);
 			widget.render();
 			assert.equal(node.innerHTML, '<div>Hello, World</div>');
 		});
@@ -108,6 +109,7 @@ define([
 			assert.equal(widget.getNode(), node, 'proper node returned');
 
 			widget = new MessageWidget2(node);
+			console.log(new MessageWidget());
 			widget.render();
 			assert.equal(node.innerHTML, '<div>Hello, World</div>');
 		});

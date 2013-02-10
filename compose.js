@@ -207,7 +207,7 @@ define([
 				// accessor properties are not copied properly as own from prototype, this resolves that issue
 				if (!instance.hasOwnProperty(name)) {
 					propertyDescriptor = properties.getDescriptor(instance, name);
-					if (propertyDescriptor && (propertyDescriptor.get || propertyDescriptor.set)) {
+					if (properties.isAccessorDescriptor(propertyDescriptor)) {
 						Object.defineProperty(instance, name, propertyDescriptor);
 					}
 				}

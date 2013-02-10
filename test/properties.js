@@ -74,6 +74,41 @@ define([
 		});
 	});
 
+	test.suite('property descriptors', function () {
+		var obj = {};
+		var value;
+		Object.defineProperty(obj, 'value', {
+			value: 'foo'
+		});
+		Object.defineProperty(obj, 'writable', {
+			writable: true
+		});
+		Object.defineProperty(obj, 'setter', {
+			set: function (val) {
+				value = val;
+			}
+		});
+		Object.defineProperty(obj, 'getter', {
+			get: function () {
+				return value;
+			}
+		});
+
+		test.test('isAccessorDescriptor', function () {
+			assert.isTrue(properties.isAccessorDescriptor(Object.getOwnPropertyDescriptor(obj, 'setter')));
+			assert.isTrue(properties.isAccessorDescriptor(Object.getOwnPropertyDescriptor(obj, 'getter')));
+			assert.isFalse(properties.isAccessorDescriptor(Object.getOwnPropertyDescriptor(obj, 'value')));
+			assert.isFalse(properties.isAccessorDescriptor(Object.getOwnPropertyDescriptor(obj, 'writable')));
+		});
+
+		test.test('isDataDescriptor', function () {
+			assert.isTrue(properties.isDataDescriptor(Object.getOwnPropertyDescriptor(obj, 'value')));
+			assert.isTrue(properties.isDataDescriptor(Object.getOwnPropertyDescriptor(obj, 'writable')));
+			assert.isFalse(properties.isDataDescriptor(Object.getOwnPropertyDescriptor(obj, 'getter')));
+			assert.isFalse(properties.isDataDescriptor(Object.getOwnPropertyDescriptor(obj, 'setter')));
+		});
+	});
+
 	test.suite('remove', function () {
 		test.test('basic', function () {
 			var obj = {

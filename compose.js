@@ -1,20 +1,18 @@
 define([
 	'./lang', // lang.delegate
-	'./debug' // debug.error
-], function (lang, debug) {
+	'./debug', // debug.error
+	'./properties'
+], function (lang, debug, properties) {
 	'use strict';
 
 	function isInMethodChain(method, name, prototypes) {
 		// summary:
 		//		Searches for a method in the given prototype hierarchy
 		// returns: Boolean
-		for (var i = 0; i < prototypes.length; i++) {
-			var prototype = prototypes[i];
-			if (prototype[name] === method) {
-				// found it
-				return true;
-			}
-		}
+
+		return prototypes.some(function (prototype) {
+			return prototype[name] === method;
+		});
 	}
 
 	function getBases(args, prototypeFlag) {
@@ -34,7 +32,7 @@ define([
 			outer:
 			for (var i = 0; i < args.length; i++) {
 				var arg = args[i],
-					target = prototypeFlag && typeof arg === 'function' ? Object.getPrototypeOf(arg) : arg;
+					target = prototypeFlag && typeof arg === 'function' ? arg.prototype : arg;
 				if (prototypeFlag || typeof arg === 'function') {
 					var argGetBases = checkChildren && arg._getBases;
 					if (argGetBases) {
@@ -84,7 +82,7 @@ define([
 
 	function mixin(dest, sources) {
 		// summary:
-		//		A specialised mixin function that handles hierarchal prototypes
+		//		A specialised mixin function that handles hierarchial prototypes
 		// dest: Object|Function
 		//		The base of which the `sources` will be mixed into
 		// sources: Object...
@@ -92,84 +90,77 @@ define([
 		// returns: Object
 		//		The composite of the sources mixed in
 
-		function defineProperty(obj, name, value, propertyDescriptor) {
-			if (!(propertyDescriptor && (propertyDescriptor.get || propertyDescriptor.set))) {
-				// propertyDescriptor is data descriptor or not present
-				propertyDescriptor = propertyDescriptor || { // configure default descriptor to match direct assignment
-					enumerable: true,
-					configurable: true,
-					writable: true
-				};
-				propertyDescriptor.value = value;
-			}
-			Object.defineProperty(obj, name, propertyDescriptor);
-		}
-
-		var args = Array.prototype.slice.call(arguments, 1), // Convert arguments into an array, skipping the first
-			name, propertyDescriptor, value, own;
-		for (var i = 0, l = args.length; i < l; i++) {
-			var arg = args[i];
+		var args = Array.prototype.slice.call(arguments, 1), // convert arguments into an Array skipping first one
+			value, i, arg, proto, key, own, propertyDescriptor;
+		for (i = 0; i < args.length; i++) {
+			arg = args[i];
 			if (typeof arg === 'function') {
-				// Argument is a function, utilise the prototype to mixin
-				var proto = arg.prototype;
-				for (name in proto) {
-					// iterate through enumerable properties (owned and unowned)
-					propertyDescriptor = Object.getOwnPropertyDescriptor(proto, name);
-					// non-owned properties don't return a property descriptor
-					value = propertyDescriptor ? propertyDescriptor.value : proto[name];
-					own = proto.hasOwnProperty(name);
-					if (typeof value === 'function' && name in dest && value !== dest[name]) {
-						var existing = dest[name];
-						propertyDescriptor = Object.getOwnPropertyDescriptor(dest, name) || propertyDescriptor;
+				proto = arg.prototype;
+				for (key in proto) {
+					// iterate through enumerable properties of prototype
+					propertyDescriptor = properties.getDescriptor(proto, key);
+					value = proto[key];
+					own = proto.hasOwnProperty(key);
+					if (typeof value === 'function' && key in dest && value !== dest[key]) {
 						if (value === required) {
-							value = existing; // It is a required value, which is being supplied, so now fulfilled
+							// this is a required value, which is now supplied, so fulfilled
+							propertyDescriptor = properties.getDescriptor(dest, key);
+							value = dest[key];
 						} else if (!own) {
-							// If it is its own property, it is considered an explicit override
-							// TODO: make faster calls on this, perhaps passing indices and caching
-							if (isInMethodChain(value, name, getBases(args, true))) {
-								// This value is in the existing method's override chain, we can use the existing
+							if (isInMethodChain(value, key,
+								getBases(Array.prototype.slice.call(args, 0, i + 1), true))) {
+								// this value is in the existing method's override chain, we can use the existing
 								// method
-								value = existing.value;
-							} else if (!isInMethodChain(existing, name, getBases([arg], true))) {
+								propertyDescriptor = properties.getDescriptor(dest, key);
+								value = dest[key];
+							} else if (!isInMethodChain(dest[key], key, getBases([arg], true))) {
 								// The existing method is not in the current override chain, so we are left with a
 								// conflict
-								debug.error('ERROR: Conflicted method "' + name + '", final composer must ' +
-									'explicitly override with the correct method.');
+								console.error('Conflicted method ' + key + ', final composer must explicitly override' +
+									'with correct method.');
 							}
 						}
 					}
-					if (value && value.install && own && !isInMethodChain(existing, name, getBases([arg], true))) {
-						// apply modifier
-						value.install.call(dest, name);
+					if (value && value.install && own && !isInMethodChain(dest[key], key, getBases([arg], true))) {
+						// apply decorator
+						value.install.call(dest, key);
 					} else {
-						// defineProperty with propertyDescriptor on destination
-						defineProperty(dest, name, value, propertyDescriptor);
+						if (key in dest) {
+							dest[key] = value;
+						} else {
+							Object.defineProperty(dest, key, propertyDescriptor);
+						}
 					}
 				}
 			} else {
-				// Argument should be an Object, mixin properties looking for modifiers
-				for (name in validArg(arg)) {
-					propertyDescriptor = Object.getOwnPropertyDescriptor(arg, name);
-					value = propertyDescriptor ? propertyDescriptor.value : arg[name];
+				for (key in validArg(arg)) {
+					propertyDescriptor = properties.getDescriptor(arg, key);
+					value = arg[key];
 					if (typeof value === 'function') {
 						if (value.install) {
-							// apply modifier
-							value.install.call(dest, name);
+							// apply decorator
+							value.install.call(dest, key);
 							continue;
 						}
-						if (name in dest && value === required) {
-							// required requirement met
-							continue;
+						if (key in dest) {
+							if (value === required) {
+								// requirement met
+								continue;
+							}
 						}
 					}
-					defineProperty(dest, name, value, propertyDescriptor);
+					if (key in dest) {
+						dest[key] = value;
+					} else {
+						Object.defineProperty(dest, key, propertyDescriptor);
+					}
 				}
 			}
 		}
 		return dest;
 	}
 
-	var compose = function (base, extensions) {
+	function compose(base, extensions) {
 		// summary:
 		//		Object compositor for JavaScript, featuring JavaScript-style prototype inheritance and composition,
 		//		multiple inheritance, mixin and traits-inspired conflict resolution and composition.
@@ -179,20 +170,21 @@ define([
 		//		Additional constructor functions or objects to be composited into the base
 		// returns: Object
 		//		The composited object class, which can be instantiated with `new`
-		var args = arguments;
-		var proto = (args.length < 2 && typeof args[0] !== 'function') ? args[0] :
+		var args = arguments,
+			proto = (args.length < 2 && typeof args[0] !== 'function') ? args[0] :
 			mixin.apply(this, [lang.delegate(validArg(base))].concat(Array.prototype.slice.call(arguments, 1)));
+
+		var constructors = getBases(args),
+			constructorsLength = constructors.length;
 
 		if (typeof args[args.length - 1] === 'object') {
 			args[args.length - 1] = proto;
 		}
 
-		var constructors = getBases(args),
-			constructorsLength = constructors.length,
-			prototypes = getBases(args, true);
+		var prototypes = getBases(args, true);
 
 		function Constructor() {
-			var instance = (this instanceof Constructor) ? this : Object.create(proto);
+			var instance = this instanceof Constructor ? this : Object.create(proto);
 			for (var i = 0; i < constructorsLength; i++) {
 				var constructor = constructors[i],
 					result = constructor.apply(instance, arguments);
@@ -200,15 +192,24 @@ define([
 					if (result instanceof Constructor) {
 						instance = result;
 					} else {
-						lang.mixin(instance, result);
+						Object.keys(result).forEach(function (key) {
+							if (key in instance) {
+								instance[key] = result[key];
+							} else {
+								Object.defineProperty(instance, key, Object.getOwnPropertyDescriptor(result, key));
+							}
+						});
 					}
 				}
 			}
-			for (var name in proto) {
+			var name, propertyDescriptor;
+			for (name in instance) {
 				// accessor properties are not copied properly as own from prototype, this resolves that issue
-				var propertyDescriptor = Object.getOwnPropertyDescriptor(proto, name);
-				if (propertyDescriptor && (propertyDescriptor.get || propertyDescriptor.set)) {
-					Object.defineProperty(instance, name, propertyDescriptor);
+				if (!instance.hasOwnProperty(name)) {
+					propertyDescriptor = properties.getDescriptor(instance, name);
+					if (propertyDescriptor && (propertyDescriptor.get || propertyDescriptor.set)) {
+						Object.defineProperty(instance, name, propertyDescriptor);
+					}
 				}
 			}
 			return instance;
@@ -234,7 +235,7 @@ define([
 		Constructor.prototype = proto;
 
 		return Constructor;
-	};
+	}
 
 	Object.defineProperty(compose, 'required', {
 		value: required,
@@ -249,14 +250,15 @@ define([
 			throw new Error('Decorator not applied');
 		}
 		Object.defineProperty(Decorator, 'install', {
-			value: install
+			enumerable: true,
+			value: install,
 		});
 		return Decorator;
 	}
 
 	Object.defineProperty(compose, 'Decorator', {
-		value: decorator,
-		enumerable: true
+		enumerable: true,
+		value: decorator
 	});
 
 	function aspect(handler) {

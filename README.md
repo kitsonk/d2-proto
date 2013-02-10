@@ -12,6 +12,7 @@ The following modules are of interest in this repository:
   support ES5 compliant user agents.  A demonstration test can be found [here](d2-proto/blob/master/test/parser.html).
 * [d2-proto/lang](d2-proto/blob/master/lang.js) - Some enhancements changes to the ``dojo/_base/lang`` that are designed
   to behave better in an ES5 world.
+* [d2-proto/properties](d2-proto/blob/master/properties.js) - Functions to make it easier to work with ES5 properties.
 * [d2-proto/compose](d2-proto/blob/master/compose.js) - A Object compositing and prototyping utility based on
   [ComposeJS][compose], a potential alternative to `dojo/_base/declare`.
 * [d2-proto/debug](d2-proto/blob/master/debug.js) - A "stub" of what might be required in a Dojo 2.0 debug API.

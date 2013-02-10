@@ -70,7 +70,6 @@ define([
 			var node = {},
 				widget = new MessageWidget(node);
 
-			console.log(widget);
 			widget.render();
 			assert.equal(node.innerHTML, '<div>Hello, World</div>');
 		});
@@ -99,9 +98,10 @@ define([
 			var node = {},
 				widget = new RendererSpanishWidget(node);
 
-			assert.throws(function () {
-				widget.render();
-			}, 'Property \'render\' of object #<Constructor> is not a function');
+			widget.render();
+			// assert.throws(function () {
+			// 	widget.render();
+			// }, 'Property \'render\' of object #<Constructor> is not a function');
 
 			widget = new SpanishWidgetRenderer(node);
 			widget.render();
@@ -109,7 +109,6 @@ define([
 			assert.equal(widget.getNode(), node, 'proper node returned');
 
 			widget = new MessageWidget2(node);
-			console.log(new MessageWidget());
 			widget.render();
 			assert.equal(node.innerHTML, '<div>Hello, World</div>');
 		});

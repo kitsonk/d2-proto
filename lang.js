@@ -1,5 +1,6 @@
 define([
-], function () {
+	'./properties'
+], function (properties) {
 	'use strict';
 
 	function _mixin(dest, source, copyFunc) {
@@ -20,29 +21,6 @@ define([
 		//		Notice that by default, _mixin executes a so-called "shallow copy" and aggregate types are copied/added
 		//		by reference.
 
-		function getPropertyDescriptor(obj, name) {
-			// summary:
-			//		Returns a property descriptor for a property
-			// obj: Object
-			//		The root object to return the property descriptor for
-			// name: String
-			//		The name of the property to search for
-			// returns: Object
-			//		The property descriptor for the property
-			// description:
-			//		The property descriptor of the named property.  If the property is not owned by the object, it will
-			//		attempt to return the property descriptor from the prototype chain until defaulting to a property
-			//		descriptor that would match the property descriptor that would be generated via direct assignment.
-
-			return Object.getOwnPropertyDescriptor(obj, name) || (Object.getPrototypeOf(obj) ?
-				getPropertyDescriptor(Object.getPrototypeOf(obj), name) : {
-					enumerable: true,
-					configurable: true,
-					writable: true,
-					value: obj[name]
-				});
-		}
-
 		var name, value, empty = {};
 		for (name in source) {
 			value = source[name];
@@ -54,7 +32,7 @@ define([
 				if (copyFunc || name in dest) {
 					dest[name] = copyFunc ? copyFunc(value) : value;
 				} else {
-					Object.defineProperty(dest, name, getPropertyDescriptor(source, name));
+					Object.defineProperty(dest, name, properties.getDescriptor(source, name));
 				}
 			}
 		}

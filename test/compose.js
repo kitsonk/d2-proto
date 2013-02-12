@@ -312,7 +312,6 @@ define([
 					baseCallCount++;
 				}, {
 					foo: function () {
-						console.log('Base.foo');
 						fooCallCount++;
 					}
 				}),
@@ -320,7 +319,6 @@ define([
 					sub1CallCount++;
 				}, {
 					foo: after(function () {
-						console.log('Sub1.foo');
 						fooSub1Count++;
 					})
 				}),
@@ -328,7 +326,6 @@ define([
 					sub2CallCount++;
 				}, {
 					foo: after(function () {
-						console.log('Sub2.foo');
 						fooSub2Count++;
 					})
 				}),

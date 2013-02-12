@@ -34,7 +34,7 @@ define([
 			// descriptor: Object
 			//		The descriptor to inspect.
 			// returns: Boolean
-			
+
 			return descriptor ? 'get' in descriptor || 'set' in descriptor : false;
 		},
 

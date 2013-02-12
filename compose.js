@@ -55,7 +55,31 @@ define([
 	}
 
 	function defineOwnProperty(name, descriptor) {
-		Object.defineProperty(this, name, descriptor);
+		// summary:
+		//		Default property setter which is used by compose when mixing in properties into objects and prototypes.
+		// name: String
+		//		The property name to be defined
+		// descriptor: Object
+		//		An object which describes the property to be defined
+
+		return Object.defineProperty(this, name, descriptor);
+	}
+
+	function getDefineProperty(O) {
+		// summary:
+		//		Return the define property for an Object.
+		// description:
+		//		Returns the most appropriate define property function for an object.  If the object is decorated with a
+		//		`defineOwnProperty` that is returned, wrapped to support the appropriate signature, otherwise
+		//		`Object.defineProperty` is returned.
+		// O: Object
+		//		The Object to inspect
+		// returns: Function
+		//		The appropriate property definition function
+
+		return O && O.defineOwnProperty ? function (obj, name, descriptor) {
+			O.defineOwnProperty.call(obj, name, descriptor);
+		} : Object.defineProperty;
 	}
 
 	function validArg(/* Mixed */ arg) {
@@ -73,12 +97,14 @@ define([
 		// summary:
 		//		A "stub" function used to identify properties that are required in descendent objects.  Throws an
 		//		error if called without the property being implemented.
+
 		throw new Error('This method is required and no implementation has been provided');
 	}
 
 	function extend() {
 		// summary:
 		//		A shortcut function to quickly extend an Object via compose
+
 		var args = [this];
 		args.push.apply(args, arguments);
 		return compose.apply(0, args);
@@ -97,80 +123,90 @@ define([
 		// returns: Object
 		//		The composite of the sources mixed in
 
-		var value, i, arg, proto, key, own, propertyDescriptor;
+		function set(dest, key, value, propertyDescriptor) {
+			// summary:
+			//		Either sets a value to a property if the property already exists in the target, otherwise defines
+			//		a new property using the supplied property descriptor.
+
+			if (key in dest && dest.hasOwnProperty(key)) {
+				dest[key] = value;
+			} else {
+				defineProperty(dest, key, propertyDescriptor);
+			}
+		}
+
+		function mixinPrototype(dest, proto) {
+			// summary:
+			//		Take a prototype and mix it into a destination, looking for specifically decorated values
+
+			var key, value, own, propertyDescriptor;
+			for (key in proto) {
+				propertyDescriptor = properties.getDescriptor(proto, key);
+				value = proto[key];
+				own = proto.hasOwnProperty(key);
+				if (typeof value === 'function' && key in dest && value !== dest[key]) {
+					if (value === required) {
+						// this is a required value, which is now supplied, so fulfilled
+						propertyDescriptor = properties.getDescriptor(dest, key);
+						value = dest[key];
+					} else if (!own) {
+						if (isInMethodChain(value, key,
+								getBases(Array.prototype.slice.call(sources, 0, i + 1), true))) {
+							// this value is in the existing method's override chain, we can use the existing method
+							propertyDescriptor = properties.getDescriptor(dest, key);
+							value = dest[key];
+						} else if (!isInMethodChain(dest[key], key, getBases([arg], true))) {
+							// The existing method is in the current override chain, so we are left with a conflict
+							console.error('Conflicted method ' + key + ', final composer must explicitly override' +
+									'with correct method.');
+						}
+					}
+				}
+				if (value && value.install && own && !isInMethodChain(dest[key], key, getBases([arg], true))) {
+					// apply decorator
+					value.install.call(dest, key);
+				} else {
+					set(dest, key, value, propertyDescriptor);
+				}
+			}
+		}
+
+		function mixinObject(dest, obj) {
+			// summary:
+			//		Take an object and mix it into a destination, looking for specifically decorated values
+
+			var key, value, propertyDescriptor;
+			for (key in obj) {
+				propertyDescriptor = properties.getDescriptor(obj, key);
+				value = obj[key];
+				if (typeof value === 'function') {
+					if (value.install) {
+						// apply decorator
+						value.install.call(dest, key);
+						continue;
+					}
+					if (key in dest) {
+						if (value === required) {
+							// requirement met
+							continue;
+						}
+					}
+				}
+				set(dest, key, value, propertyDescriptor);
+			}
+		}
+
+		var i, arg;
 
 		for (i = 0; i < sources.length; i++) {
 			arg = sources[i];
 			if (typeof arg === 'function') {
-				proto = arg.prototype;
-				for (key in proto) {
-					// iterate through enumerable properties of prototype
-					propertyDescriptor = properties.getDescriptor(proto, key);
-					value = proto[key];
-					own = proto.hasOwnProperty(key);
-					if (typeof value === 'function' && key in dest && value !== dest[key]) {
-						if (value === required) {
-							// this is a required value, which is now supplied, so fulfilled
-							propertyDescriptor = properties.getDescriptor(dest, key);
-							value = dest[key];
-						} else if (!own) {
-							if (isInMethodChain(value, key,
-								getBases(Array.prototype.slice.call(sources, 0, i + 1), true))) {
-								// this value is in the existing method's override chain, we can use the existing
-								// method
-								propertyDescriptor = properties.getDescriptor(dest, key);
-								value = dest[key];
-							} else if (!isInMethodChain(dest[key], key, getBases([arg], true))) {
-								// The existing method is not in the current override chain, so we are left with a
-								// conflict
-								console.error('Conflicted method ' + key + ', final composer must explicitly override' +
-									'with correct method.');
-							}
-						}
-					}
-					if (value && value.install && own && !isInMethodChain(dest[key], key, getBases([arg], true))) {
-						// apply decorator
-						value.install.call(dest, key);
-					} else {
-						if (key in dest) {
-							dest[key] = value;
-						} else {
-							defineProperty(dest, key, propertyDescriptor);
-						}
-					}
-				}
+				mixinPrototype(dest, arg.prototype);
 			} else {
-				for (key in validArg(arg)) {
-					propertyDescriptor = properties.getDescriptor(arg, key);
-					value = arg[key];
-					if (typeof value === 'function') {
-						if (value.install) {
-							// apply decorator
-							value.install.call(dest, key);
-							continue;
-						}
-						if (key in dest) {
-							if (value === required) {
-								// requirement met
-								continue;
-							}
-						}
-					}
-					if (key in dest) {
-						dest[key] = value;
-					} else {
-						defineProperty(dest, key, propertyDescriptor);
-					}
-				}
+				mixinObject(dest, validArg(arg));
 			}
 		}
 		return dest;
-	}
-
-	function getDefineProperty(O) {
-		return O && O.defineOwnProperty ? function (obj, name, descriptor) {
-			O.defineOwnProperty.call(obj, name, descriptor);
-		} : Object.defineProperty;
 	}
 
 	function compose(base, extensions) {
@@ -183,6 +219,7 @@ define([
 		//		Additional constructor functions or objects to be composited into the base
 		// returns: Object
 		//		The composited object class, which can be instantiated with `new`
+
 		var args = arguments,
 			proto = (args.length < 2 && typeof args[0] !== 'function') ? args[0] :
 				mixin(lang.delegate(validArg(base)), Array.prototype.slice.call(arguments, 1), getDefineProperty(base));
@@ -197,53 +234,55 @@ define([
 		var prototypes = getBases(args, true);
 
 		function Constructor() {
-			var instance = this instanceof Constructor ? this : Object.create(proto);
+			// summary:
+			//		The base constructor function for compose generated classes.  Will return a new instance, even if
+			//		called directly, without the `new` keyword.
+			// returns: Object
+			//		The constructed object
+			
+			var instance = this instanceof Constructor ? this : Object.create(proto),
+				defineProperty;
 			for (var i = 0; i < constructorsLength; i++) {
 				var constructor = constructors[i],
-					result = constructor.apply(instance, arguments),
-					propertyDescriptor;
+					result = constructor.apply(instance, arguments);
 				if (typeof result === 'object') {
 					if (result instanceof Constructor) {
 						instance = result;
 					} else {
+						defineProperty = getDefineProperty(instance);
 						Object.keys(result).forEach(function (key) {
 							if (key in instance) {
 								instance[key] = result[key];
 							} else {
-								propertyDescriptor = Object.getOwnPropertyDescriptor(result, key);
-								if (instance && instance.defineOwnProperty) {
-									instance.defineOwnProperty(instance, key, propertyDescriptor);
-								} else {
-									Object.defineProperty(instance, key, propertyDescriptor);
-								}
+								defineProperty(instance, key, Object.getOwnPropertyDescriptor(result, key));
 							}
 						});
 					}
 				}
 			}
-			var name;
-			for (name in instance) {
-				// accessor properties are not copied properly as own from prototype, this resolves that issue
+			// accessor properties are not copied as own from prototype, which is desired, therefore they are defined
+			// on the target instance
+			var propertyDescriptor;
+			defineProperty = getDefineProperty(instance);
+			for (var name in instance) {
 				if (!instance.hasOwnProperty(name)) {
 					propertyDescriptor = properties.getDescriptor(instance, name);
 					if (properties.isAccessorDescriptor(propertyDescriptor)) {
-						if (instance && instance.defineOwnProperty) {
-							instance.defineOwnProperty(instance, name, propertyDescriptor);
-						} else {
-							Object.defineProperty(instance, name, propertyDescriptor);
-						}
+						defineProperty(instance, name, propertyDescriptor);
 					}
 				}
 			}
 			return instance;
 		}
 
+		// returns "pre-calculated" bases for a Constructor class
 		Object.defineProperty(Constructor, '_getBases', {
 			value: function (prototypeFlag) {
 				return prototypeFlag ? prototypes : constructors;
 			}
 		});
 
+		// provides an extend function on the Constructor class
 		Object.defineProperty(Constructor, 'extend', {
 			value: extend,
 			writable: true,
@@ -251,6 +290,7 @@ define([
 			configurable: true
 		});
 
+		// provides a defineOwnProperty on the Constructor class
 		Object.defineProperty(Constructor, 'defineOwnProperty', {
 			value: defineOwnProperty,
 			writable: true,
@@ -258,6 +298,7 @@ define([
 			configurable: true
 		});
 
+		// if compose not operating in a secure mode, provides a constructor property
 		if (!compose.secure) {
 			Object.defineProperty(proto, 'constructor', {
 				value: Constructor,
@@ -265,6 +306,7 @@ define([
 			});
 		}
 
+		// sets the prototype for the Constructor
 		Constructor.prototype = proto;
 
 		return Constructor;
@@ -297,6 +339,7 @@ define([
 		configurable: true
 	});
 
+	// TODO: convert to `dojo/aspect`
 	function aspect(handler) {
 		return function (advice) {
 			return decorator(function install(name) {
@@ -307,7 +350,6 @@ define([
 	}
 
 	var stop = {};
-
 	Object.defineProperty(compose, 'stop', {
 		value: stop,
 		enumerable: true,

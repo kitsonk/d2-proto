@@ -54,6 +54,10 @@ define([
 		return bases;
 	}
 
+	function defineOwnProperty(name, descriptor) {
+		Object.defineProperty(this, name, descriptor);
+	}
+
 	function validArg(/* Mixed */ arg) {
 		// summary:
 		//		Checks to see if a valid argument is being passed and throws an error if it isn't, otherwise returns
@@ -80,20 +84,23 @@ define([
 		return compose.apply(0, args);
 	}
 
-	function mixin(dest, sources) {
+	function mixin(dest, sources, defineProperty) {
 		// summary:
 		//		A specialised mixin function that handles hierarchial prototypes
 		// dest: Object|Function
 		//		The base of which the `sources` will be mixed into
-		// sources: Object...
+		// sources: Array
 		//		The source (or sources) that should be mixed into the Object from left to right.
+		// defineProperty: Function
+		//		The function to use for defining properties with the signature of `obj`, `name` and `descriptor` where
+		//		`obj` is the target, `name` is the property name and `descriptor` is the property descriptor.
 		// returns: Object
 		//		The composite of the sources mixed in
 
-		var args = Array.prototype.slice.call(arguments, 1), // convert arguments into an Array skipping first one
-			value, i, arg, proto, key, own, propertyDescriptor;
-		for (i = 0; i < args.length; i++) {
-			arg = args[i];
+		var value, i, arg, proto, key, own, propertyDescriptor;
+
+		for (i = 0; i < sources.length; i++) {
+			arg = sources[i];
 			if (typeof arg === 'function') {
 				proto = arg.prototype;
 				for (key in proto) {
@@ -108,7 +115,7 @@ define([
 							value = dest[key];
 						} else if (!own) {
 							if (isInMethodChain(value, key,
-								getBases(Array.prototype.slice.call(args, 0, i + 1), true))) {
+								getBases(Array.prototype.slice.call(sources, 0, i + 1), true))) {
 								// this value is in the existing method's override chain, we can use the existing
 								// method
 								propertyDescriptor = properties.getDescriptor(dest, key);
@@ -128,7 +135,7 @@ define([
 						if (key in dest) {
 							dest[key] = value;
 						} else {
-							Object.defineProperty(dest, key, propertyDescriptor);
+							defineProperty(dest, key, propertyDescriptor);
 						}
 					}
 				}
@@ -152,12 +159,18 @@ define([
 					if (key in dest) {
 						dest[key] = value;
 					} else {
-						Object.defineProperty(dest, key, propertyDescriptor);
+						defineProperty(dest, key, propertyDescriptor);
 					}
 				}
 			}
 		}
 		return dest;
+	}
+
+	function getDefineProperty(O) {
+		return O && O.defineOwnProperty ? function (obj, name, descriptor) {
+			O.defineOwnProperty.call(obj, name, descriptor);
+		} : Object.defineProperty;
 	}
 
 	function compose(base, extensions) {
@@ -172,7 +185,7 @@ define([
 		//		The composited object class, which can be instantiated with `new`
 		var args = arguments,
 			proto = (args.length < 2 && typeof args[0] !== 'function') ? args[0] :
-			mixin.apply(this, [lang.delegate(validArg(base))].concat(Array.prototype.slice.call(arguments, 1)));
+				mixin(lang.delegate(validArg(base)), Array.prototype.slice.call(arguments, 1), getDefineProperty(base));
 
 		var constructors = getBases(args),
 			constructorsLength = constructors.length;
@@ -187,7 +200,8 @@ define([
 			var instance = this instanceof Constructor ? this : Object.create(proto);
 			for (var i = 0; i < constructorsLength; i++) {
 				var constructor = constructors[i],
-					result = constructor.apply(instance, arguments);
+					result = constructor.apply(instance, arguments),
+					propertyDescriptor;
 				if (typeof result === 'object') {
 					if (result instanceof Constructor) {
 						instance = result;
@@ -196,19 +210,28 @@ define([
 							if (key in instance) {
 								instance[key] = result[key];
 							} else {
-								Object.defineProperty(instance, key, Object.getOwnPropertyDescriptor(result, key));
+								propertyDescriptor = Object.getOwnPropertyDescriptor(result, key);
+								if (instance && instance.defineOwnProperty) {
+									instance.defineOwnProperty(instance, key, propertyDescriptor);
+								} else {
+									Object.defineProperty(instance, key, propertyDescriptor);
+								}
 							}
 						});
 					}
 				}
 			}
-			var name, propertyDescriptor;
+			var name;
 			for (name in instance) {
 				// accessor properties are not copied properly as own from prototype, this resolves that issue
 				if (!instance.hasOwnProperty(name)) {
 					propertyDescriptor = properties.getDescriptor(instance, name);
 					if (properties.isAccessorDescriptor(propertyDescriptor)) {
-						Object.defineProperty(instance, name, propertyDescriptor);
+						if (instance && instance.defineOwnProperty) {
+							instance.defineOwnProperty(instance, name, propertyDescriptor);
+						} else {
+							Object.defineProperty(instance, name, propertyDescriptor);
+						}
 					}
 				}
 			}
@@ -223,12 +246,22 @@ define([
 
 		Object.defineProperty(Constructor, 'extend', {
 			value: extend,
-			enumerable: true
+			writable: true,
+			enumerable: true,
+			configurable: true
+		});
+
+		Object.defineProperty(Constructor, 'defineOwnProperty', {
+			value: defineOwnProperty,
+			writable: true,
+			enumerable: true,
+			configurable: true
 		});
 
 		if (!compose.secure) {
 			Object.defineProperty(proto, 'constructor', {
-				value: Constructor
+				value: Constructor,
+				configurable: true
 			});
 		}
 
@@ -239,7 +272,8 @@ define([
 
 	Object.defineProperty(compose, 'required', {
 		value: required,
-		enumerable: true
+		enumerable: true,
+		configurable: true
 	});
 
 	function decorator(install, direct) {
@@ -250,15 +284,17 @@ define([
 			throw new Error('Decorator not applied');
 		}
 		Object.defineProperty(Decorator, 'install', {
-			enumerable: true,
 			value: install,
+			enumerable: true,
+			configurable: true
 		});
 		return Decorator;
 	}
 
 	Object.defineProperty(compose, 'Decorator', {
+		value: decorator,
 		enumerable: true,
-		value: decorator
+		configurable: true
 	});
 
 	function aspect(handler) {
@@ -274,7 +310,8 @@ define([
 
 	Object.defineProperty(compose, 'stop', {
 		value: stop,
-		enumerable: true
+		enumerable: true,
+		configurable: true
 	});
 
 	Object.defineProperty(compose, 'around', {
@@ -312,7 +349,7 @@ define([
 			return decorator(function (key) {
 				var inheritedDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), key);
 				if (inheritedDescriptor) {
-					mixin(inheritedDescriptor, descriptor);
+					mixin(inheritedDescriptor, [descriptor], Object.defineProperty);
 				}
 				Object.defineProperty(this, key, inheritedDescriptor || descriptor);
 			});
@@ -340,7 +377,8 @@ define([
 
 	Object.defineProperty(compose, 'create', {
 		value: function (base) {
-			var instance = mixin.apply(this, [lang.delegate(base)].concat(Array.prototype.slice.call(arguments, 1))),
+			var instance = mixin(lang.delegate(base), Array.prototype.slice.call(arguments, 1),
+					getDefineProperty(base)),
 				arg;
 			for (var i = 0, l = arguments.length; i < l; i++) {
 				arg = arguments[i];
@@ -355,13 +393,14 @@ define([
 
 	Object.defineProperty(compose, 'apply', {
 		value: function (self, args) {
-			return self ? mixin(self, args) : extend.apply.call(compose, 0, args);
+			return self ? mixin(self, args, getDefineProperty(self)) :
+				extend.apply.call(compose, 0, args);
 		}
 	});
 
 	Object.defineProperty(compose, 'call', {
 		value: function (self) {
-			return mixin(self, Array.prototype.slice.call(arguments, 1));
+			return mixin(self, Array.prototype.slice.call(arguments, 1), getDefineProperty(self));
 		}
 	});
 

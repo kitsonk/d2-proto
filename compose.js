@@ -54,34 +54,6 @@ define([
 		return bases;
 	}
 
-	function defineOwnProperty(name, descriptor) {
-		// summary:
-		//		Default property setter which is used by compose when mixing in properties into objects and prototypes.
-		// name: String
-		//		The property name to be defined
-		// descriptor: Object
-		//		An object which describes the property to be defined
-
-		return Object.defineProperty(this, name, descriptor);
-	}
-
-	function getDefineProperty(O) {
-		// summary:
-		//		Return the define property for an Object.
-		// description:
-		//		Returns the most appropriate define property function for an object.  If the object is decorated with a
-		//		`defineOwnProperty` that is returned, wrapped to support the appropriate signature, otherwise
-		//		`Object.defineProperty` is returned.
-		// O: Object
-		//		The Object to inspect
-		// returns: Function
-		//		The appropriate property definition function
-
-		return O && O.defineOwnProperty ? function (obj, name, descriptor) {
-			O.defineOwnProperty.call(obj, name, descriptor);
-		} : Object.defineProperty;
-	}
-
 	function validArg(/* Mixed */ arg) {
 		// summary:
 		//		Checks to see if a valid argument is being passed and throws an error if it isn't, otherwise returns
@@ -110,16 +82,13 @@ define([
 		return compose.apply(0, args);
 	}
 
-	function mixin(dest, sources, defineProperty) {
+	function mixin(dest, sources) {
 		// summary:
 		//		A specialised mixin function that handles hierarchial prototypes
 		// dest: Object|Function
 		//		The base of which the `sources` will be mixed into
 		// sources: Array
 		//		The source (or sources) that should be mixed into the Object from left to right.
-		// defineProperty: Function
-		//		The function to use for defining properties with the signature of `obj`, `name` and `descriptor` where
-		//		`obj` is the target, `name` is the property name and `descriptor` is the property descriptor.
 		// returns: Object
 		//		The composite of the sources mixed in
 
@@ -131,7 +100,7 @@ define([
 			if (key in dest && dest.hasOwnProperty(key)) {
 				dest[key] = value;
 			} else {
-				defineProperty(dest, key, propertyDescriptor);
+				Object.defineProperty(dest, key, propertyDescriptor);
 			}
 		}
 
@@ -222,7 +191,7 @@ define([
 
 		var args = arguments,
 			proto = (args.length < 2 && typeof args[0] !== 'function') ? args[0] :
-				mixin(lang.delegate(validArg(base)), Array.prototype.slice.call(arguments, 1), getDefineProperty(base));
+				mixin(lang.delegate(validArg(base)), Array.prototype.slice.call(arguments, 1));
 
 		var constructors = getBases(args),
 			constructorsLength = constructors.length;
@@ -240,8 +209,7 @@ define([
 			// returns: Object
 			//		The constructed object
 			
-			var instance = this instanceof Constructor ? this : Object.create(proto),
-				defineProperty;
+			var instance = this instanceof Constructor ? this : Object.create(proto);
 			for (var i = 0; i < constructorsLength; i++) {
 				var constructor = constructors[i],
 					result = constructor.apply(instance, arguments);
@@ -249,12 +217,11 @@ define([
 					if (result instanceof Constructor) {
 						instance = result;
 					} else {
-						defineProperty = getDefineProperty(instance);
 						Object.keys(result).forEach(function (key) {
 							if (key in instance) {
 								instance[key] = result[key];
 							} else {
-								defineProperty(instance, key, Object.getOwnPropertyDescriptor(result, key));
+								Object.defineProperty(instance, key, Object.getOwnPropertyDescriptor(result, key));
 							}
 						});
 					}
@@ -263,12 +230,11 @@ define([
 			// accessor properties are not copied as own from prototype, which is desired, therefore they are defined
 			// on the target instance
 			var propertyDescriptor;
-			defineProperty = getDefineProperty(instance);
 			for (var name in instance) {
 				if (!instance.hasOwnProperty(name)) {
 					propertyDescriptor = properties.getDescriptor(instance, name);
 					if (properties.isAccessorDescriptor(propertyDescriptor)) {
-						defineProperty(instance, name, propertyDescriptor);
+						Object.defineProperty(instance, name, propertyDescriptor);
 					}
 				}
 			}
@@ -285,14 +251,6 @@ define([
 		// provides an extend function on the Constructor class
 		Object.defineProperty(Constructor, 'extend', {
 			value: extend,
-			writable: true,
-			enumerable: true,
-			configurable: true
-		});
-
-		// provides a defineOwnProperty on the Constructor class
-		Object.defineProperty(Constructor, 'defineOwnProperty', {
-			value: defineOwnProperty,
 			writable: true,
 			enumerable: true,
 			configurable: true
@@ -391,7 +349,7 @@ define([
 			return decorator(function (key) {
 				var inheritedDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), key);
 				if (inheritedDescriptor) {
-					mixin(inheritedDescriptor, [descriptor], Object.defineProperty);
+					mixin(inheritedDescriptor, [descriptor]);
 				}
 				Object.defineProperty(this, key, inheritedDescriptor || descriptor);
 			});
@@ -419,8 +377,7 @@ define([
 
 	Object.defineProperty(compose, 'create', {
 		value: function (base) {
-			var instance = mixin(lang.delegate(base), Array.prototype.slice.call(arguments, 1),
-					getDefineProperty(base)),
+			var instance = mixin(lang.delegate(base), Array.prototype.slice.call(arguments, 1)),
 				arg;
 			for (var i = 0, l = arguments.length; i < l; i++) {
 				arg = arguments[i];
@@ -435,14 +392,14 @@ define([
 
 	Object.defineProperty(compose, 'apply', {
 		value: function (self, args) {
-			return self ? mixin(self, args, getDefineProperty(self)) :
+			return self ? mixin(self, args) :
 				extend.apply.call(compose, 0, args);
 		}
 	});
 
 	Object.defineProperty(compose, 'call', {
 		value: function (self) {
-			return mixin(self, Array.prototype.slice.call(arguments, 1), getDefineProperty(self));
+			return mixin(self, Array.prototype.slice.call(arguments, 1));
 		}
 	});
 

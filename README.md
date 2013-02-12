@@ -8,15 +8,15 @@ of Dojo 2.0.  Things will change and move around!  *Use at your own risk.*
 
 The following modules are of interest in this repository:
 
-* [d2-proto/parser](parser.js) - A "modern" version of the ``dojo/parser``.  It is intended to only
-  support ES5 compliant user agents.  A demonstration test can be found [here](d2-proto/blob/master/test/parser.html).
-* [d2-proto/lang](lang.js) - Some enhancements changes to the ``dojo/_base/lang`` that are designed
-  to behave better in an ES5 world.
+* [d2-proto/parser](parser.js) - A "modern" version of the ``dojo/parser``.  It is intended to only support ES5
+  compliant user agents.  A demonstration test can be found [here](test/parser.html).
+* [d2-proto/lang](lang.js) - Some enhancements changes to the ``dojo/_base/lang`` that are designed to behave better in
+  an ES5 world.
 * [d2-proto/properties](properties.js) - Functions to make it easier to work with ES5 properties.
 * [d2-proto/compose](compose.js) - An Object compositing and prototyping utility based on
   [ComposeJS][compose], a potential alternative to `dojo/_base/declare`.
-* [d2-proto/Observable](Observable.js) - A class that provides "Harmony-like" `Object.observe`
-  functionality that is specifically designed to be offloaded to the native functionality that is planned for ES6.
+* [d2-proto/Observable](Observable.js) - A class that provides "Harmony-like" `Object.observe` functionality that is
+  specifically designed to be offloaded to the native functionality that is planned for ES6.
 * [d2-proto/debug](debug.js) - A "stub" of what might be required in a Dojo 2.0 debug API.
 
 ## Requirements

@@ -45,17 +45,25 @@
 		var Extended = Observable.extend({
 			foo: 'bar'
 		});
+
 		var instance = new Extended();
+
 		instance.defineOwnProperty('bar', {
 			value: 'baz',
 			writable: true,
 			enumerable: true,
 			configurable: true
 		});
-		instance.observeProperty('foo');
-		console.log(instance);
+
+		function propertyLogger(records) {
+			console.log(JSON.stringify(records));
+		}
+
+		instance.observeProperty('foo', propertyLogger);
+		instance.observeProperty('bar');
 		instance.foo = 'qat';
-		console.log(instance.foo);
+		instance.bar = 'foo';
+		Observable.deliverChangeRecords(propertyLogger);
 	});
 	</script>
 </head>

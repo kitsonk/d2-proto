@@ -4,6 +4,7 @@ define([
 	'dojo/aspect',
 	'dojo/has'
 ], function (compose, properties, aspect, has) {
+	'use strict';
 
 	has.add('es6-observe', Object.observe && typeof Object.observe === 'function');
 
@@ -45,7 +46,7 @@ define([
 		return anyWorkDone;
 	}
 
-	function createChangeRecord(type, object, name, oldDesc, newDesc) {
+	function createChangeRecord(type, object, name, oldValue) {
 		var changeRecord = {};
 		Object.defineProperty(changeRecord, 'type', {
 			value: type,
@@ -59,13 +60,11 @@ define([
 			value: name,
 			enumerable: true
 		});
-		if (properties.isDataDescriptor(oldDesc)) {
-			if (!properties.isDataDescriptor(newDesc) || oldDesc.value !== newDesc.value) {
-				Object.defineProperty(changeRecord, 'oldValue', {
-					value: oldDesc.value,
-					enumerable: true
-				});
-			}
+		if (oldValue !== undefined) {
+			Object.defineProperty(changeRecord, 'oldValue', {
+				value: oldValue,
+				enumerable: true
+			});
 		}
 		return Object.preventExtensions(changeRecord);
 	}
@@ -135,8 +134,12 @@ define([
 								return value;
 							},
 							set: function (newValue) {
-								console.log(name, newValue);
-								value = newValue;
+								if (value !== newValue) {
+									var changeObservers = this.getNotifier().changeObservers,
+										changeRecord = createChangeRecord('updated', this, name, value);
+									enqueueChangeRecord(changeRecord, changeObservers);
+									value = newValue;
+								}
 							},
 							enumerable: oldDesc.enumerable,
 							configurable: true
@@ -147,8 +150,13 @@ define([
 							get: oldDesc.get,
 							set: aspect.around(oldDesc, 'set', function (oldSet) {
 								return function (newValue) {
-									var result = oldSet(newValue),
-										newValue = target[name];
+									var oldValue = target[name],
+										result = oldSet(newValue);
+									if (oldValue !== target[name]) {
+										var changeObservers = this.getNotifier().changeObservers,
+											changeRecord = createChangeRecord('updated', this, name, oldValue);
+										enqueueChangeRecord(changeRecord, changeObservers);
+									}
 									return result;
 								};
 							}),
@@ -188,7 +196,7 @@ define([
 	}
 
 	/* This is the base Observable class */
-	return compose(function (params) {
+	var Observable = compose(function (params) {
 		for (var key in params) {
 			this[key] = params[key];
 		}
@@ -234,22 +242,16 @@ define([
 			}
 		}),
 
-		deliverChangeRecords: property({
-			value: function (callback) {
-				if (typeof callback !== 'function') {
-					throw new TypeError('callback must be a function');
-				}
-				while (deliverChangeRecords(callback)) {}
-			}
-		}),
-
 		getNotifier: property({
-			get: function () {
+			value: function () {
 				if (Object.isFrozen(this)) {
 					return null;
 				}
 				if (!this._notifier) {
-					this._notifier = new Notifier(this);
+					Object.defineProperty(this, '_notifier', {
+						value: new Notifier(this),
+						writable: true
+					});
 				}
 				return this._notifier;
 			}
@@ -257,11 +259,17 @@ define([
 
 		defineOwnProperty: property({
 			value: function (name, descriptor) {
+				descriptor = descriptor || {
+					value: undefined,
+					writable: true,
+					enumerable: true,
+					configurable: true
+				};
 				return Object.defineProperty(this, name, descriptor);
 			}
 		}),
 
-		remove: property({
+		deleteProperty: property({
 			value: function (name) {
 				if (name in this) {
 					delete this[name];
@@ -270,15 +278,40 @@ define([
 		}),
 
 		observeProperty: property({
-			value: function (name) {
+			value: function (name, callback) {
 				installObservableProperty(this, name);
+				if (callback) {
+					this.observe(callback);
+				}
 			}
 		}),
 
-		_notifier: property({
-			value: undefined,
-			writable: true
+		observeProperties: property({
+			value: function (names, callback) {
+				if (!(names instanceof Array)) {
+					throw new TypeError('names must be an array');
+				}
+				var self = this;
+				names.forEach(function (name) {
+					installObservableProperty(self, name);
+				});
+				if (callback) {
+					this.observe(callback);
+				}
+			}
 		})
 	});
+
+	Object.defineProperty(Observable, 'deliverChangeRecords', {
+		value:  function (callback) {
+			if (typeof callback !== 'function') {
+				throw new TypeError('callback must be a function');
+			}
+			while (deliverChangeRecords(callback)) {}
+		},
+		enumerable: true
+	});
+
+	return Observable;
 
 });

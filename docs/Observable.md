@@ -29,6 +29,17 @@ require(['d2-proto/Observable', 'd2-proto/compose'], function (Observable, compo
 });
 ```
 
+This would output something like this:
+
+```js
+[{
+	type: "updated",
+	object: instance,
+	name: "foo",
+	oldValue: "bar"
+}]
+```
+
 ## Notes
 
 * The current Harmony specification does not specify address accessor properties, while `Observable`
@@ -36,5 +47,8 @@ require(['d2-proto/Observable', 'd2-proto/compose'], function (Observable, compo
 * The current Harmony specification is at the Object level, meaning any changes to the Object generate change records.
   Because of the overhead of a non-native code solution, the `Observable` implementation only provides change records
   for properties that are being specifically "observed", created or deleted via the implementation.
+
+* A callback registered to receive change records for an object will receive all records for that object while
+  observing it, even it the callback added via `.observeProperty()` or `.observeProperties()`.
 
 [harmony]: http://wiki.ecmascript.org/doku.php?id=harmony:observe#object.observe

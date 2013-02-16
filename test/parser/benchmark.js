@@ -1,7 +1,7 @@
 define([
-	'teststack!tdd',
+	'teststack!benchmark',
 	'chai/chai',
-	'../parser'
+	'../../parser'
 ], function (test, chai, parser) {
 
 	var assert = chai.assert;

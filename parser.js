@@ -82,7 +82,8 @@ define([
 			} catch (e) {
 				dfd.reject(e);
 			}
-		} else {
+		}
+		else {
 			dfd.resolve([]);
 		}
 		return dfd.promise;
@@ -178,15 +179,20 @@ define([
 				}
 				if (obj.proto[p] instanceof Array) {
 					props[p] = v.split(/\s*,\s*/);
-				} else if (t === 'string') {
+				}
+				else if (t === 'string') {
 					props[p] = v;
-				} else if (t === 'number') {
+				}
+				else if (t === 'number') {
 					props[p] = v - 0;
-				} else if (t === 'boolean') {
+				}
+				else if (t === 'boolean') {
 					props[p] = (v !== 'false');
-				} else if (t === 'object') {
+				}
+				else if (t === 'object') {
 					props[p] = convertPropsString(v);
-				} else if (t === 'function') {
+				}
+				else if (t === 'function') {
 					props[p] = lang.getObject(v, false) || new Function(v);
 					obj.node.removeAttribute(p);
 				}
@@ -526,11 +532,13 @@ define([
 			if (!options && rootNode && typeof rootNode === 'object') {
 				if ('nodeType' in rootNode) {
 					options = {};
-				} else {
+				}
+				else {
 					options = rootNode;
 					rootNode = options.rootNode || win.body();
 				}
-			} else {
+			}
+			else {
 				rootNode = rootNode || win.body();
 				options = options || {};
 			}

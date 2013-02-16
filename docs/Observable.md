@@ -33,10 +33,10 @@ This would output something like this:
 
 ```js
 [{
-	type: "updated",
-	object: instance,
-	name: "foo",
-	oldValue: "bar"
+	"type": "updated",
+	"object": { "foo": "qat" },
+	"name": "foo",
+	"oldValue": "bar"
 }]
 ```
 

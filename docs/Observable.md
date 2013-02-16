@@ -29,4 +29,12 @@ require(['d2-proto/Observable', 'd2-proto/compose'], function (Observable, compo
 });
 ```
 
+## Notes
+
+* The current Harmony specification does not specify address accessor properties, while `Observable`
+
+* The current Harmony specification is at the Object level, meaning any changes to the Object generate change records.
+  Because of the overhead of a non-native code solution, the `Observable` implementation only provides change records
+  for properties that are being specifically "observed", created or deleted via the implementation.
+
 [harmony]: http://wiki.ecmascript.org/doku.php?id=harmony:observe#object.observe

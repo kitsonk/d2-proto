@@ -38,7 +38,8 @@ define([
 					if (argGetBases) {
 						iterate(argGetBases(prototypeFlag));	// don't need to check children for these, they should
 																// be pre-flattened
-					} else {
+					}
+					else {
 						for (var j = 0; j < bases.length; j++) {
 							if (target === bases[j]) {
 								continue outer;
@@ -99,7 +100,8 @@ define([
 
 			if (key in dest && dest.hasOwnProperty(key)) {
 				dest[key] = value;
-			} else {
+			}
+			else {
 				Object.defineProperty(dest, key, propertyDescriptor);
 			}
 		}
@@ -118,13 +120,15 @@ define([
 						// this is a required value, which is now supplied, so fulfilled
 						propertyDescriptor = properties.getDescriptor(dest, key);
 						value = dest[key];
-					} else if (!own) {
+					}
+					else if (!own) {
 						if (isInMethodChain(value, key,
 								getBases(Array.prototype.slice.call(sources, 0, i + 1), true))) {
 							// this value is in the existing method's override chain, we can use the existing method
 							propertyDescriptor = properties.getDescriptor(dest, key);
 							value = dest[key];
-						} else if (!isInMethodChain(dest[key], key, getBases([arg], true))) {
+						}
+						else if (!isInMethodChain(dest[key], key, getBases([arg], true))) {
 							// The existing method is in the current override chain, so we are left with a conflict
 							console.error('Conflicted method ' + key + ', final composer must explicitly override' +
 									'with correct method.');
@@ -134,7 +138,8 @@ define([
 				if (value && value.install && own && !isInMethodChain(dest[key], key, getBases([arg], true))) {
 					// apply decorator
 					value.install.call(dest, key);
-				} else {
+				}
+				else {
 					set(dest, key, value, propertyDescriptor);
 				}
 			}
@@ -171,7 +176,8 @@ define([
 			arg = sources[i];
 			if (typeof arg === 'function') {
 				mixinPrototype(dest, arg.prototype);
-			} else {
+			}
+			else {
 				mixinObject(dest, validArg(arg));
 			}
 		}
@@ -216,11 +222,13 @@ define([
 				if (typeof result === 'object') {
 					if (result instanceof Constructor) {
 						instance = result;
-					} else {
+					}
+					else {
 						Object.keys(result).forEach(function (key) {
 							if (key in instance) {
 								instance[key] = result[key];
-							} else {
+							}
+							else {
 								Object.defineProperty(instance, key, Object.getOwnPropertyDescriptor(result, key));
 							}
 						});
@@ -367,7 +375,8 @@ define([
 						fromKey || key));
 				if (descriptor) {
 					Object.defineProperty(this, key, descriptor);
-				} else {
+				}
+				else {
 					throw new Error('Source method ' + fromKey + ' was not available to be renamed to ' + key);
 				}
 			});

@@ -17,6 +17,8 @@ The following modules are of interest in this repository:
   [ComposeJS][compose], a potential alternative to `dojo/_base/declare`.
 * [d2-proto/Observable](Observable.js) - A class that provides "Harmony-like" `Object.observe` functionality that is
   specifically designed to be offloaded to the native functionality that is planned for ES6.
+* [d2-proto/put](put.js) - A DOM construction and manipulation module, based directly on [put-selector][put] that uses
+  CSS styled selectors to describe the manipulation of the DOM.
 * [d2-proto/debug](debug.js) - A "stub" of what might be required in a Dojo 2.0 debug API.
 
 ## Requirements
@@ -51,3 +53,4 @@ Contributions are welcome in the form of pull requests, but must be covered unde
 [compose]: /kriszyp/compose
 [dojo]: /dojo/dojo
 [teststack]: /csnover/dojo2-teststack
+[put]: https://github.com/kriszyp/put-selector

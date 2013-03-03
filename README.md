@@ -20,6 +20,7 @@ The following modules are of interest in this repository:
 * [d2-proto/put](put.js) - A DOM construction and manipulation module, based directly on [put-selector][put] that uses
   CSS styled selectors to describe the manipulation of the DOM.
 * [d2-proto/debug](debug.js) - A "stub" of what might be required in a Dojo 2.0 debug API.
+* [d2-proto/widget/Widget](widget/Widget.js) - A "dijit-style" base widget based on compose and put.
 
 ## Requirements
 

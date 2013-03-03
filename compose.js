@@ -184,7 +184,7 @@ define([
 		return dest;
 	}
 
-	function compose(base, extensions) {
+	function compose(base /*=====, extensions =====*/) {
 		// summary:
 		//		Object compositor for JavaScript, featuring JavaScript-style prototype inheritance and composition,
 		//		multiple inheritance, mixin and traits-inspired conflict resolution and composition.
@@ -249,19 +249,19 @@ define([
 			return instance;
 		}
 
-		// returns "pre-calculated" bases for a Constructor class
-		Object.defineProperty(Constructor, '_getBases', {
-			value: function (prototypeFlag) {
-				return prototypeFlag ? prototypes : constructors;
+		Object.defineProperties(Constructor, {
+			// returns "pre-calculated" bases for a Constructor class
+			_getBases: {
+				value: function (prototypeFlag) {
+					return prototypeFlag ? prototypes : constructors;
+				}
+			},
+			// provides an extend function on the Constructor class
+			extend: {
+				value: extend,
+				enumerable: true,
+				configurable: true
 			}
-		});
-
-		// provides an extend function on the Constructor class
-		Object.defineProperty(Constructor, 'extend', {
-			value: extend,
-			writable: true,
-			enumerable: true,
-			configurable: true
 		});
 
 		// if compose not operating in a secure mode, provides a constructor property
@@ -278,13 +278,10 @@ define([
 		return Constructor;
 	}
 
-	Object.defineProperty(compose, 'required', {
-		value: required,
-		enumerable: true,
-		configurable: true
-	});
-
 	function decorator(install, direct) {
+		// summary:
+		//		Generates a Decorator function that can be used to special special properties that are required to
+		//		be installed via a specific installer.
 		function Decorator() {
 			if (direct) {
 				return direct.apply(this, arguments);
@@ -299,12 +296,6 @@ define([
 		return Decorator;
 	}
 
-	Object.defineProperty(compose, 'Decorator', {
-		value: decorator,
-		enumerable: true,
-		configurable: true
-	});
-
 	// TODO: convert to `dojo/aspect`
 	function aspect(handler) {
 		return function (advice) {
@@ -316,106 +307,144 @@ define([
 	}
 
 	var stop = {};
-	Object.defineProperty(compose, 'stop', {
-		value: stop,
-		enumerable: true,
-		configurable: true
-	});
 
-	Object.defineProperty(compose, 'around', {
-		value: aspect(function (target, base, advice) {
-			return advice.call(target, base);
-		}),
-		enumerable: true
-	});
+	Object.defineProperties(compose, {
 
-	Object.defineProperty(compose, 'before', {
-		value: aspect(function (target, base, advice) {
-			return function () {
-				var results = advice.apply(this, arguments);
-				if (results !== stop) {
-					return base.apply(this, results || arguments);
-				}
-			};
-		}),
-		enumerable: true
-	});
-
-	Object.defineProperty(compose, 'after', {
-		value: aspect(function (target, base, advice) {
-			return function () {
-				var results = base.apply(this, arguments),
-					adviceResults = advice.apply(this, arguments);
-				return adviceResults === undefined ? results : adviceResults;
-			};
-		}),
-		enumerable: true
-	});
-
-	Object.defineProperty(compose, 'property', {
-		value: function (descriptor) {
-			return decorator(function (key) {
-				var inheritedDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), key);
-				if (inheritedDescriptor) {
-					mixin(inheritedDescriptor, [descriptor]);
-				}
-				Object.defineProperty(this, key, inheritedDescriptor || descriptor);
-			});
+		// required: Function
+		//		A "placeholder" for a property that is required to be defined in a descendent
+		required: {
+			value: required,
+			enumerable: true,
+			configurable: true
 		},
-		enumerable: true
-	});
 
-	Object.defineProperty(compose, 'from', {
-		value: function (trait, fromKey) {
-			var descriptor = fromKey ? Object.getOwnPropertyDescriptor((typeof trait === 'function' ?
-				trait.prototype : trait), fromKey) : null;
-			return decorator(function (key) {
-				descriptor = descriptor || (typeof trait === 'string' ? Object.getOwnPropertyDescriptor(this, trait) :
-					Object.getOwnPropertyDescriptor((typeof trait === 'function' ? trait.prototype : trait),
-						fromKey || key));
-				if (descriptor) {
-					Object.defineProperty(this, key, descriptor);
-				}
-				else {
-					throw new Error('Source method ' + fromKey + ' was not available to be renamed to ' + key);
-				}
-			});
+		// Decorator: Function
+		//		A constructor function that generates a decorator function that installs properties with a custom
+		//		installer.
+		Decorator: {
+			value: decorator,
+			enumerable: true,
+			configurable: true
 		},
-		enumerable: true
-	});
 
-	Object.defineProperty(compose, 'create', {
-		value: function (base) {
-			var instance = mixin(lang.delegate(base), Array.prototype.slice.call(arguments, 1)),
-				arg;
-			for (var i = 0, l = arguments.length; i < l; i++) {
-				arg = arguments[i];
-				if (typeof arg === 'function') {
-					instance = arg.call(instance) || instance;
+		// stop: Object
+		//		Used to determine the end of a "dependency chain" of functions that are being used for aspect advice
+		stop: {
+			value: stop,
+			enumerable: true,
+			configurable: true
+		},
+
+		// around: Function
+		//		Used to generate a property that gives around aspect advice for the ancestor's property
+		around: {
+			value: aspect(function (target, base, advice) {
+				return advice.call(target, base);
+			}),
+			enumerable: true
+		},
+
+		// before: Function
+		//		Used to generate a property that gives before aspect advice for the ancestor's property
+		before: {
+			value: aspect(function (target, base, advice) {
+				return function () {
+					var results = advice.apply(this, arguments);
+					if (results !== stop) {
+						return base.apply(this, results || arguments);
+					}
+				};
+			}),
+			enumerable: true
+		},
+
+		// after: Function
+		//		Used to generate a property that gives after advice for the ancestor's property
+		after: {
+			value: aspect(function (target, base, advice) {
+				return function () {
+					var results = base.apply(this, arguments),
+						adviceResults = advice.apply(this, arguments);
+					return adviceResults === undefined ? results : adviceResults;
+				};
+			}),
+			enumerable: true
+		},
+
+		// property: Function
+		//		Used to generate a property defined by an ES5 descriptor (which can also understand the aspect advice
+		//		for the get and set functions)
+		property: {
+			value: function (descriptor) {
+				return decorator(function (key) {
+					var inheritedDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(this), key);
+					if (inheritedDescriptor) {
+						mixin(inheritedDescriptor, [descriptor]);
+					}
+					Object.defineProperty(this, key, inheritedDescriptor || descriptor);
+				});
+			},
+			enumerable: true
+		},
+
+		// from: Function
+		//		"Copy" a property from a specific ancestor
+		from: {
+			value: function (trait, fromKey) {
+				var descriptor = fromKey ? Object.getOwnPropertyDescriptor((typeof trait === 'function' ?
+					trait.prototype : trait), fromKey) : null;
+				return decorator(function (key) {
+					descriptor = descriptor || (typeof trait === 'string' ? Object.getOwnPropertyDescriptor(this, trait) :
+						Object.getOwnPropertyDescriptor((typeof trait === 'function' ? trait.prototype : trait),
+							fromKey || key));
+					if (descriptor) {
+						Object.defineProperty(this, key, descriptor);
+					}
+					else {
+						throw new Error('Source method ' + fromKey + ' was not available to be renamed to ' + key);
+					}
+				});
+			},
+			enumerable: true
+		},
+
+		// create: Function
+		//		A convenience function to create a new instance of a composed object
+		create: {
+			value: function (base) {
+				var instance = mixin(lang.delegate(base), Array.prototype.slice.call(arguments, 1)),
+					arg;
+				for (var i = 0, l = arguments.length; i < l; i++) {
+					arg = arguments[i];
+					if (typeof arg === 'function') {
+						instance = arg.call(instance) || instance;
+					}
 				}
+				return instance;
+			},
+			enumerable: true
+		},
+
+		apply: {
+			value: function (self, args) {
+				return self ? mixin(self, args) :
+					extend.apply.call(compose, 0, args);
 			}
-			return instance;
 		},
-		enumerable: true
-	});
+		call: {
+			value: function (self) {
+				return mixin(self, Array.prototype.slice.call(arguments, 1));
+			}
+		},
 
-	Object.defineProperty(compose, 'apply', {
-		value: function (self, args) {
-			return self ? mixin(self, args) :
-				extend.apply.call(compose, 0, args);
+		// secure: Boolean
+		//		If operating in secure mode, the constructor property will not be added to generated Constructors,
+		//		thereby ensuring that the constructor cannot be manipulated by other code.
+		secure: {
+			value: false,
+			writable: true,
+			enumerable: true
 		}
-	});
-
-	Object.defineProperty(compose, 'call', {
-		value: function (self) {
-			return mixin(self, Array.prototype.slice.call(arguments, 1));
-		}
-	});
-
-	Object.defineProperty(compose, 'secure', {
-		value: false,
-		writable: true,
-		enumerable: true
 	});
 
 	return compose;

@@ -11,7 +11,7 @@ define([
 		namespaces = false,
 		doc = document;
 
-	has('ie-createlement', typeof document.createElement === 'object');
+	has.add('ie-createlement', typeof document.createElement === 'object');
 
 	function insertTextNode(element, text) {
 		element.appendChild(doc.createTextNode(text));
@@ -172,17 +172,24 @@ define([
 		return returnValue;
 	}
 
-	put.addNameSpace = function (name, uri) {
-		if (doc.createElementNS) {
-			(namespaces || (namespaces = {}))[name] = uri;
+	Object.defineProperties(put, {
+		addNamespace: {
+			value: function (name, uri) {
+				(namespaces || (namespaces = {}))[name] = uri;
+			},
+			enumerable: true
+		},
+		defaultTag: {
+			value: 'div',
+			writable: true,
+			enumerable: true
+		},
+		forDocument: {
+			value: forDocument,
+			writable: true,
+			enumerable: true
 		}
-		else {
-			// for old IE
-			doc.namespaces.add(name, uri);
-		}
-	};
+	});
 
-	put.defaultTag = 'div';
-	put.forDocument = forDocument;
 	return put;
 });

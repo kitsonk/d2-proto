@@ -4,6 +4,7 @@ define([
 	'dojo/_base/lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
 	'dojo/_base/window', // win.document
 	'dojo/aspect', // aspect.before, aspect.around, aspect.after
+	'dojo/date/stamp', // dates.fromISOString
 	'dojo/Deferred', // Deferred
 	'dojo/dom', // dom.byId
 	'dojo/has', // has.add, has()
@@ -11,7 +12,7 @@ define([
 	'dojo/promise/all', // all
 	'dojo/when', // when
 	'dojo/domReady!'
-], function (require, debug, lang, win, aspect, Deferred, dom, has, on, all, when) {
+], function (require, debug, lang, win, aspect, dates, Deferred, dom, has, on, all, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser
 	/*jshint evil:true */
@@ -193,7 +194,7 @@ define([
 		if (obj.node && obj.proto) {
 			var p, v, t;
 			for (p in obj.proto) {
-				v = obj.node.getAttribute(p);
+				v = obj.node.getAttributeNode(p);
 				v = v && v.nodeValue;
 				t = typeof obj.proto[p];
 				if (!v && (t !== 'boolean' || v !== '')) {
@@ -212,7 +213,12 @@ define([
 					props[p] = (v !== 'false');
 				}
 				else if (t === 'object') {
-					props[p] = convertPropsString(v);
+					if (obj.proto[p] instanceof Date) {
+						props[p] = v === '' ? new Date(v) : v === 'now' ? new Date() : dates.fromISOString(v);
+					}
+					else {
+						props[p] = convertPropsString(v);
+					}
 				}
 				else if (t === 'function') {
 					props[p] = lang.getObject(v, false) || new Function(v);
@@ -298,7 +304,6 @@ define([
 				if (!obj.ctor) {
 					throw new Error('Cannot resolve constructor function for type(s): ' + obj.types.join());
 				}
-				obj.proto = obj.ctor && obj.ctor.prototype;
 				return obj;
 			}
 
@@ -306,6 +311,7 @@ define([
 				if (!obj.ctor) {
 					obj = resolveCtor(obj);
 				}
+				obj.proto = obj.ctor && obj.ctor.prototype;
 
 				var propsAttr = obj.node.getAttribute(propsAttribute),
 					dojoAttachPoint = obj.node.getAttribute(attachPointAttribute),

@@ -4,14 +4,13 @@ define([
 	'dojo/_base/lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
 	'dojo/_base/window', // win.body
 	'dojo/aspect', // aspect.before, aspect.around, aspect.after
-	'dojo/date/stamp', // dates.fromISOString
 	'dojo/Deferred', // Deferred
 	'dojo/dom', // dom.byId
 	'dojo/on', // on
 	'dojo/promise/all', // all
 	'dojo/when', // when
 	'dojo/domReady!'
-], function (require, debug, lang, win, aspect, dates, Deferred, dom, on, all, when) {
+], function (require, debug, lang, win, aspect, Deferred, dom, on, all, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser
 	/*jshint evil:true */
@@ -170,7 +169,7 @@ define([
 		var props;
 
 		try {
-			props = eval('({' + value + '})');
+			props = eval.call(this, '({' + value + '})');
 		}
 		catch (e) {
 			throw new SyntaxError('Error in attribute to object conversion: ' + e.message + '\nAttribute Value: "' +
@@ -195,37 +194,32 @@ define([
 			for (p in obj.proto) {
 				v = obj.node.getAttributeNode(p);
 				v = v && v.nodeValue;
-				t = typeof obj.proto[p];
 				if (v === null) {
 					continue;
 				}
-				if (obj.proto[p] instanceof Array) {
-					props[p] = v.split(/\s*,\s*/);
-				}
-				else {
-					switch (t) {
-					case 'string':
-						props[p] = v;
-						break;
-					case 'number':
-						props[p] = v - 0;
-						break;
-					case 'boolean':
-						props[p] = !!v;
-						break;
-					case 'object':
-						if (obj.proto[p] instanceof Date) {
-							props[p] = v === '' ? new Date(v) : v === 'now' ? new Date() : dates.fromISOString(v);
-						}
-						else {
-							props[p] = convertPropsString(v);
-						}
-						break;
-					case 'function':
-						props[p] = lang.getObject(v, false) || new Function(v);
-						obj.node.removeAttribute(p);
-						break;
+				t = typeof obj.proto[p];
+				switch (t) {
+				case 'string':
+					props[p] = v;
+					break;
+				case 'number':
+					props[p] = v - 0;
+					break;
+				case 'boolean':
+					props[p] = v === 'false' ? false : !!v;
+					break;
+				case 'object':
+					if (obj.proto[p] instanceof Array) {
+						props[p] = v ? v.split(/\s*,\s*/) : [];
 					}
+					else {
+						props[p] = convertPropsString(v);
+					}
+					break;
+				case 'function':
+					props[p] = lang.getObject(v, false) || new Function(v);
+					obj.node.removeAttribute(p);
+					break;
 				}
 			}
 		}
@@ -319,7 +313,7 @@ define([
 				var propsAttr = obj.node.getAttribute(propsAttribute),
 					dojoAttachPoint = obj.node.getAttribute(attachPointAttribute),
 					dojoAttachEvent = obj.node.getAttribute(attachEventAttribute),
-					props = getProps(obj);
+					props = options.noCustomAttributes ? {} : getProps.call(options.propsThis, obj);
 
 				if (dojoAttachPoint) {
 					props.dojoAttachPoint = dojoAttachPoint;
@@ -339,7 +333,7 @@ define([
 
 				// Items from the data-dojo-props overrides anything derived from the attributes
 				if (propsAttr) {
-					props = lang.mixin(props, convertPropsString(propsAttr));
+					props = lang.mixin(props, convertPropsString.call(options.propsThis, propsAttr));
 				}
 
 				// If mixin is present, then it will override anything in props
@@ -572,6 +566,7 @@ define([
 			//			mixin                | `undefined` | If present, this Object will be mixed into every Objects configuration object prior to instantiation.
 			//			noDeclarativeRequire | `false`     | If `true` it disables scanning the DOM for declarative requires to increase performance
 			//			noAutoRequire        | `false`     | If `true` disables the ability to auto-require modules.  If auto-require is disabled, any modules not already loaded will cause the parser to error when it attempts to instantiate the object.
+			//			noCustomAttributes   | `false`     | If `true` disables the ability to use custom attributes to set properties on instantiation of the object.  Only recognises `data-dojo-props` to set instantiation properties.
 			//			contextRequire       | `undefined` | Used to provide a context aware `require()` to be used for module resolution.  If not provided, defaults to the context of the parser module.
 			//
 			// returns: dojo/promise/Promise

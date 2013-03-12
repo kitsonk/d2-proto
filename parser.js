@@ -2,17 +2,16 @@ define([
 	'require',
 	'./debug', // debug.warn
 	'dojo/_base/lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
-	'dojo/_base/window', // win.document
+	'dojo/_base/window', // win.body
 	'dojo/aspect', // aspect.before, aspect.around, aspect.after
 	'dojo/date/stamp', // dates.fromISOString
 	'dojo/Deferred', // Deferred
 	'dojo/dom', // dom.byId
-	'dojo/has', // has.add, has()
 	'dojo/on', // on
 	'dojo/promise/all', // all
 	'dojo/when', // when
 	'dojo/domReady!'
-], function (require, debug, lang, win, aspect, dates, Deferred, dom, has, on, all, when) {
+], function (require, debug, lang, win, aspect, dates, Deferred, dom, on, all, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser
 	/*jshint evil:true */
@@ -197,32 +196,36 @@ define([
 				v = obj.node.getAttributeNode(p);
 				v = v && v.nodeValue;
 				t = typeof obj.proto[p];
-				if (!v && (t !== 'boolean' || v !== '')) {
+				if (v === null) {
 					continue;
 				}
 				if (obj.proto[p] instanceof Array) {
 					props[p] = v.split(/\s*,\s*/);
 				}
-				else if (t === 'string') {
-					props[p] = v;
-				}
-				else if (t === 'number') {
-					props[p] = v - 0;
-				}
-				else if (t === 'boolean') {
-					props[p] = (v !== 'false');
-				}
-				else if (t === 'object') {
-					if (obj.proto[p] instanceof Date) {
-						props[p] = v === '' ? new Date(v) : v === 'now' ? new Date() : dates.fromISOString(v);
+				else {
+					switch (t) {
+					case 'string':
+						props[p] = v;
+						break;
+					case 'number':
+						props[p] = v - 0;
+						break;
+					case 'boolean':
+						props[p] = !!v;
+						break;
+					case 'object':
+						if (obj.proto[p] instanceof Date) {
+							props[p] = v === '' ? new Date(v) : v === 'now' ? new Date() : dates.fromISOString(v);
+						}
+						else {
+							props[p] = convertPropsString(v);
+						}
+						break;
+					case 'function':
+						props[p] = lang.getObject(v, false) || new Function(v);
+						obj.node.removeAttribute(p);
+						break;
 					}
-					else {
-						props[p] = convertPropsString(v);
-					}
-				}
-				else if (t === 'function') {
-					props[p] = lang.getObject(v, false) || new Function(v);
-					obj.node.removeAttribute(p);
 				}
 			}
 		}

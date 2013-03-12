@@ -135,8 +135,9 @@ define([
 
 		var prefix = '',
 			suffix = '',
-			args = script.getAttribute(scriptArgsAttribute) || '',
-			w = script.getAttribute(scriptWithAttribute);
+			args = script.getAttribute(scriptArgsAttribute),
+			w = script.getAttribute(scriptWithAttribute),
+			fn;
 
 		if (w) {
 			w.split(/\s*,\s*/).forEach(function (part) {
@@ -145,16 +146,37 @@ define([
 			});
 		}
 
-		return new Function(args ? args.split(/\s*,\s*/) : [], prefix + script.innerHTML + suffix);
+		try {
+			fn = new Function(args ? args.split(/\s*,\s*/) : [], prefix + script.innerHTML + suffix);
+		}
+		catch (e) {
+			if (e instanceof SyntaxError) {
+				throw new SyntaxError('Error in declarative script: ' + e.message + '\nArguments: ' + args +
+					'\nContent:\n' + prefix + script.innerHTML + suffix);
+			}
+			else {
+				throw e;
+			}
+		}
 
+		return fn;
 	}
 
-	function convertPropsString(props) {
+	function convertPropsString(value) {
 		// summary:
 		//		eval is evil, except when it isn't.  There is no other way to take a text string and convert it into a
 		//		JavaScript object.
 
-		return eval('({' + props + '})');
+		var props;
+
+		try {
+			props = eval('({' + value + '})');
+		}
+		catch (e) {
+			throw new SyntaxError('Error in attribute to object conversion: ' + e.message + '\nAttribute Value: "' +
+				value + '"');
+		}
+		return props;
 	}
 
 	function getProps(obj) {
@@ -264,10 +286,25 @@ define([
 			options = options || {};
 			options.contextRequire = options.contextRequire = require;
 
+			function resolveCtor(obj) {
+				// summary:
+				//		When the constructor is not available, try one more time to resolve the constructor.  This is
+				//		here to reduce the cyclomatic complexity of the instantiate function.
+				// obj: Object
+				//		This is the hash of the parsed object
+				// returns: Object
+
+				obj.ctor = getCtor(obj.types, options.contextRequire);  // Get ctor will now throw if it cannot be resolved
+				if (!obj.ctor) {
+					throw new Error('Cannot resolve constructor function for type(s): ' + obj.types.join());
+				}
+				obj.proto = obj.ctor && obj.ctor.prototype;
+				return obj;
+			}
+
 			var instances = objects.map(function (obj) {
 				if (!obj.ctor) {
-					obj.ctor = getCtor(obj.types, options.contextRequire);  // Get ctor will now throw if it cannot be resolved
-					obj.proto = obj.ctor && obj.ctor.prototype;
+					obj = resolveCtor(obj);
 				}
 
 				var propsAttr = obj.node.getAttribute(propsAttribute),
@@ -284,8 +321,10 @@ define([
 				}
 
 				// Handling of special node attributes
-				props['class'] = obj.node.className;
-				if (!props.style) {
+				if (obj.node.className && !props['class']) {
+					props['class'] = obj.node.className;
+				}
+				if (obj.node.style.cssText && !props.style) {
 					obj.node.style.cssText;
 				}
 
@@ -355,8 +394,9 @@ define([
 				}
 
 				// If a constructor has an adaptor function, this will be used to return an instance of the object
-				var adaptor = obj.ctor.adaptor || (obj.proto && obj.proto.adaptor);
+				var adaptor = (obj.ctor && obj.ctor.adaptor) || (obj.proto && obj.proto.adaptor);
 
+				// Create the new instance
 				var instance = adaptor ? adaptor(props, obj.node, obj.ctor) : new obj.ctor(props, obj.node);
 
 				// Add the instance to the global scope if jsID attribute is set

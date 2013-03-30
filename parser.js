@@ -3,7 +3,7 @@ define([
 	'./debug', // debug.warn
 	'dojo/_base/lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
 	'dojo/_base/window', // win.body
-	'dojo/aspect', // aspect.before, aspect.around, aspect.after
+	'./aspect', // aspect.before, aspect.around, aspect.after
 	'dojo/Deferred', // Deferred
 	'dojo/dom', // dom.byId
 	'dojo/on', // on
@@ -112,10 +112,11 @@ define([
 
 		try {
 			contextRequire(mids, function () {
+				var args = arguments;
 				vars.forEach(function (name, idx) {
-					lang.setObject(name, arguments[idx]);
+					lang.setObject(name, args[idx]);
 				});
-				dfd.resolve(arguments);
+				dfd.resolve(args);
 			});
 		} catch (e) {
 			dfd.reject(e);
@@ -192,8 +193,10 @@ define([
 		if (obj.node && obj.proto) {
 			var p, v, t;
 			for (p in obj.proto) {
-				v = obj.node.getAttributeNode(p);
-				v = v && v.nodeValue;
+				// Should report `null` on supported browsers if attribute not found.
+				// Note that DOM3 spec does state it should be an empty string, but this should not be an issue in
+				// supported browsers and avoids that necessity of a .hasAttribute() call.
+				v = obj.node.getAttribute(p);
 				if (v === null) {
 					continue;
 				}
@@ -206,7 +209,7 @@ define([
 					props[p] = v - 0;
 					break;
 				case 'boolean':
-					props[p] = v === 'false' ? false : !!v;
+					props[p] = v !== 'false';
 					break;
 				case 'object':
 					if (obj.proto[p] instanceof Array) {
@@ -591,12 +594,10 @@ define([
 			// rootNode = rootNode || win.body();
 			// options = options || {};
 
-			var self = this,
-				p = this.scan(rootNode, options).then(function (objects) {
-					return self.instantiate(objects, options);
-				});
-
-			return p;
+			var self = this;
+			return this.scan(rootNode, options).then(function (objects) {
+				return self.instantiate(objects, options);
+			});
 		}
 	};
 

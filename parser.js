@@ -13,7 +13,7 @@ define([
 ], function (require, debug, lang, win, aspect, Deferred, dom, on, all, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser
-	/*jshint evil:true */
+	/* jshint evil:true */
 
 	var scopeBase = 'dojo',
 		attributeBase = 'data-' + scopeBase + '-',
@@ -52,8 +52,7 @@ define([
 			});
 			if (mixins.length > 1) {
 				var ctor = mixins.shift();
-				ctorMap[ts] = ctor.createSubclass ? ctor.createSubclass.apply(ctor, mixins) :
-					ctor.extend.apply(ctor, mixins);
+				ctorMap[ts] = ctor.createSubclass ? ctor.createSubclass(mixins) : ctor.extend.apply(ctor, mixins);
 			}
 		}
 		return ctorMap[ts];
@@ -78,7 +77,8 @@ define([
 				contextRequire(mids, function () {
 					dfd.resolve(Array.prototype.slice.call(arguments, 0));
 				});
-			} catch (e) {
+			}
+			catch (e) {
 				dfd.reject(e);
 			}
 		}
@@ -292,6 +292,18 @@ define([
 			options = options || {};
 			options.contextRequire = options.contextRequire = require;
 
+			var instances,
+				propsAttr,
+				dojoAttachPoint,
+				dojoAttachEvent,
+				props,
+				scripts,
+				scriptType,
+				adaptor,
+				instance,
+				jsId,
+				fn;
+
 			function resolveCtor(obj) {
 				// summary:
 				//		When the constructor is not available, try one more time to resolve the constructor.  This is
@@ -307,16 +319,16 @@ define([
 				return obj;
 			}
 
-			var instances = objects.map(function (obj) {
+			instances = objects.map(function (obj) {
 				if (!obj.ctor) {
 					obj = resolveCtor(obj);
 				}
 				obj.proto = obj.ctor && obj.ctor.prototype;
 
-				var propsAttr = obj.node.getAttribute(propsAttribute),
-					dojoAttachPoint = obj.node.getAttribute(attachPointAttribute),
-					dojoAttachEvent = obj.node.getAttribute(attachEventAttribute),
-					props = options.noCustomAttributes ? {} : getProps.call(options.propsThis, obj);
+				propsAttr = obj.node.getAttribute(propsAttribute);
+				dojoAttachPoint = obj.node.getAttribute(attachPointAttribute);
+				dojoAttachEvent = obj.node.getAttribute(attachEventAttribute);
+				props = options.noCustomAttributes ? {} : getProps.call(options.propsThis, obj);
 
 				if (dojoAttachPoint) {
 					props.dojoAttachPoint = dojoAttachPoint;
@@ -349,11 +361,11 @@ define([
 					props.template = true;
 				}
 
-				var scripts = [];
+				scripts = [];
 				if (!((obj.ctor && obj.ctor._noScript) || (obj.proto && obj.proto._noScript))) {
 					getScriptNodes(obj.node).forEach(function (script) {
 						obj.node.removeChild(script);
-						var scriptType = script.getAttribute('type');
+						scriptType = script.getAttribute('type');
 						switch (scriptType) {
 						case scriptTypeBase + 'on':
 							scripts.push({
@@ -400,20 +412,20 @@ define([
 				}
 
 				// If a constructor has an adaptor function, this will be used to return an instance of the object
-				var adaptor = (obj.ctor && obj.ctor.adaptor) || (obj.proto && obj.proto.adaptor);
+				adaptor = (obj.ctor && obj.ctor.adaptor) || (obj.proto && obj.proto.adaptor);
 
 				// Create the new instance
-				var instance = adaptor ? adaptor(props, obj.node, obj.ctor) : new obj.ctor(props, obj.node);
+				instance = adaptor ? adaptor(props, obj.node, obj.ctor) : new obj.ctor(props, obj.node);
 
 				// Add the instance to the global scope if jsID attribute is set
-				var jsId = obj.node.getAttribute(jsIdAttribute);
+				jsId = obj.node.getAttribute(jsIdAttribute);
 				if (jsId) {
 					lang.setObject(jsId, instance);
 				}
 
 				// Loop through the scripts, post the instantiation of the object and set them up
 				scripts.forEach(function (script) {
-					var fn = functionFromScript(script.node);
+					fn = functionFromScript(script.node);
 					switch (script.type) {
 					case 'on':
 						on(instance, script.evt, fn);

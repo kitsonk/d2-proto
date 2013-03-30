@@ -11,19 +11,24 @@ define([
 	'../put',
 	'./resources/AMDClass1',
 	'./resources/AMDClass2',
+	'./resources/AMDMixin',
 	'dojo/domReady!'
 ], function (require, test, assert, declare, lang, dom, Evented, Stateful, parser, put) {
 
 	// Because there are many variables created in the global scope that are not present for the tests, turning off
 	// the undefined warning for jshint:
-	/*jshint undef: false*/
+	/* jshint undef: false */
 
 	// Create test DOM
 	function createDom(body) {
 		put(body, 'h1', { innerHTML: 'Parser Unit Test' });
+
+		// Script function used in tests
 		put(body, 'script[type=text/javascript]', {
 			innerHTML: 'function foo(){ this.fooCalled=true; }'
 		});
+
+		// DOM Structure for Basic tests
 		var basic = put(body, 'div#basic');
 		var obj1 = put(basic, 'div#obj1[data-dojo-type=Class1][data-dojo-id=obj1][strProp1=text][strProp2=]' +
 			'[intProp1=5][arrProp1=foo, bar, baz][arrProp2=][boolProp1=true][boolProp2=false][funcProp2=foo]' +
@@ -52,7 +57,19 @@ define([
 			innerHTML: 'hi'
 		});
 		disabledObj.setAttribute('disabled', '');
+		put(basic, 'input[data-dojo-type=InputClass][data-dojo-id=mixedObj][title=native title][value=mixedValue]')
+			.setAttribute('data-dojo-props', 'custom1: 999, title: "custom title"');
+		var container1 = put(basic, 'div div#container1[data-dojo-type=NormalContainer][data-dojo-id=container1]');
+		put(container1, 'div[data-dojo-type=Class1][data-dojo-id=contained1]');
+		put(container1, 'div div[data-dojo-type=Class1][data-dojo-id=contained2]');
+		var container2 = put(basic, 'div div#container2[data-dojo-type=ShieldedContainer][data-dojo-id=container2]');
+		put(container2, 'div[data-dojo-type=Class1][data-dojo-id=contained3]');
+		put(container2, 'div div[data-dojo-type=Class1][data-dojo-id=contained4]');
+
+		// Parsing a sub-node
 		put(body, 'div #toParse[data-dojo-type=Class1][data-dojo-id=obj3]');
+
+		// DOM for stateful declarative scripts
 		var stateful = put(body, 'div#stateful [data-dojo-type=StatefulClass][data-dojo-id=stateful1]');
 		put(stateful, 'script[type=dojo/watch][data-dojo-prop=strProp1][data-dojo-args=prop,oldValue,newValue]', {
 			innerHTML: 'this.set("objProp1", { prop: prop, oldValue: oldValue, newValue: newValue });'
@@ -60,6 +77,24 @@ define([
 		put(stateful, 'script[type=dojo/on][data-dojo-event=click][data-dojo-args=e]', {
 			innerHTML: 'this.set("boolProp1", true);'
 		});
+
+		// DOM for adaptor classes
+		var adaptor = put(body, 'div#adaptor');
+		put(adaptor, 'div[data-dojo-type=AdaptorClass][data-dojo-id=adaptor1][bar=qat]')
+			.setAttribute('data-dojo-props', 'foo:"bar"');
+
+		// DOM for startup tests
+		put(body, 'div#start div[data-dojo-type=StartupClass][data-dojo-id=startup1]');
+		put(body, 'div#nostart div[data-dojo-type=StartupClass][data-dojo-id=startup2]');
+		var container3 = put(body, 'div#template div[data-dojo-type=ShieldedContainer][data-dojo-id=container3]');
+		put(container3, 'div[data-dojo-type=Class1][data-dojo-id=contained5]');
+		put(container3, 'div div[data-dojo-type=Class1][data-dojo-id=contained6]');
+
+		// DOM for parser mixin tests
+		put(body, 'div div#mixin div[data-dojo-type=Class1][data-dojo-id=mixin1]')
+			.setAttribute('data-dojo-props', 'strProp1: "foo"');
+
+		// DOM for AMD MID tests
 		var amd = put(body, 'div#amd');
 		put(amd, 'div[data-dojo-type=d2-proto/test/resources/AMDClass1][data-dojo-id=amd1]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
@@ -69,11 +104,15 @@ define([
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
 		put(amd, 'div[data-dojo-type=./test/resources/AMDClass4][data-dojo-id=amd4]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
+
+		// DOM for contextual require tests
 		var contextRequire = put(body, 'div#contextRequire');
 		put(contextRequire, 'div[data-dojo-type=./resources/AMDClass1][data-dojo-id=context1]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
 		put(contextRequire, 'div[data-dojo-type=./resources/AMDClass5][data-dojo-id=context2]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
+
+		// DOM for declarative require tests
 		var declarativeRequire = put(body, 'div#declarativeRequire');
 		put(declarativeRequire, 'script[type=dojo/require]', {
 			innerHTML: '\nAMDClass1: "d2-proto/test/resources/AMDClass1",\nAMDClass2: "./test/resources/AMDClass2",\n'
@@ -85,11 +124,22 @@ define([
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
 		put(declarativeRequire, 'div[data-dojo-type=classes.AMDClass3][data-dojo-id=declarative3]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
+
+		// DOM for data-dojo-mixins tests
+		var declarativeMixins = put(body, 'div#declarativeMixins');
+		put(declarativeMixins, 'div[data-dojo-type=Class1][data-dojo-id=resultMixin1][data-dojo-mixins=Mixin1,Mixin2,./test/resources/AMDMixin]');
+		put(declarativeMixins, 'div[data-dojo-type=ClassForMixins][data-dojo-id=resultMixin2][data-dojo-mixins=Mixin1, Mixin2, ./test/resources/AMDMixin]');
+		put(declarativeMixins, 'div[data-dojo-type=MyNonDojoClass][data-dojo-id=resultMixin3][data-dojo-mixins=Mixin1,Mixin2]');
+
+		// DOM for parser error handling tests
+		put(body, 'div#throwerror1 div[data-dojo-type=NonExistentClass][data-dojo-id=noclass1]');
+		put(body, 'div#throwerror2 div[data-dojo-type=some/bad/MID][data-dojo-id=noclass2]');
+		put(body, 'div#throwerror3 div[data-dojo-type=ThrowErrorClass][data-dojo-id=noclass3]');
 	}
 
 	createDom(document.body);
 
-	var MyNonDojoClass = function () {};
+	lang.setObject('MyNonDojoClass', function () {});
 	MyNonDojoClass.extend = function () {
 		var args = arguments;
 		return function () {
@@ -163,6 +213,61 @@ define([
 		prototypeOnclick: false,
 		onclick: function () {
 			this.prototypeOnclick = true;
+		}
+	}));
+
+	lang.setObject('NormalContainer', declare(null, {
+		constructor: function (args/*, node*/) {
+			lang.mixin(this, args);
+		}
+	}));
+
+	lang.setObject('ShieldedContainer', declare(null, {
+		constructor: function (args/*, node*/) {
+			lang.mixin(this, args);
+		},
+		stopParser: true
+	}));
+
+	lang.setObject('AdaptorClass', declare(null, {
+		constructor: function () {
+			this.fromAdaptor = false;
+		},
+		fromAdaptor: false,
+		adaptor: function (args, node, Ctor) {
+			var i = new Ctor();
+			i.fromAdaptor = true;
+			i.params = args;
+			i.bar = node.getAttribute('bar');
+			return i;
+		}
+	}));
+
+	lang.setObject('StartupClass', declare(null, {
+		constructor: function (args/*, node*/) {
+			lang.mixin(this, args);
+		},
+		started: false,
+		startup: function () {
+			this.started = true;
+		}
+	}));
+
+	lang.setObject('ClassForMixins', declare(null, {
+		classDone: true
+	}));
+
+	lang.setObject('Mixin1', declare(null, {
+		mixin1Done: true
+	}));
+
+	lang.setObject('Mixin2', declare(null, {
+		mixin2Done: true
+	}));
+
+	lang.setObject('ThrowErrorClass', declare(null, {
+		constructor: function (/*args, node*/) {
+			throw new Error('Error on construction!');
 		}
 	}));
 
@@ -246,6 +351,12 @@ define([
 			assert.isFalse(checkedObj.disabled, 'checkedObj.disabled');
 			assert.isTrue(checkedObj.checked, 'checkedObj.checked');
 		});
+		test.test('mixed assignment', function () {
+			assert(mixedObj, 'mixedObj');
+			assert.equal('mixedValue', mixedObj.value, 'mixedObj.value');
+			assert.equal(999, mixedObj.custom1, 'mixedObj.custom1');
+			assert.equal('custom title', mixedObj.title, 'mixedObj.title');
+		});
 		test.test('function property', function () {
 			obj1.onclick();
 			assert(obj1.prototypeOnclick, 'obj1.prototypeOnclick');
@@ -277,6 +388,18 @@ define([
 			assert(obj1.method3ran, 'obj1.method3ran after');
 			assert(obj1.method3after, 'obj1.method3after');
 		});
+		test.test('containers', function () {
+			assert(container1, 'container1');
+			assert(container1 instanceof NormalContainer);
+			assert(contained1, 'contained1');
+			assert(contained1 instanceof Class1);
+			assert(contained2, 'contained2');
+			assert(contained2 instanceof Class1);
+			assert(container2, 'container2');
+			assert(container2 instanceof ShieldedContainer);
+			assert.isFalse(lang.exists('contained3'), 'contained3');
+			assert.isFalse(lang.exists('contained4'), 'contained4');
+		});
 		test.test('parse sub-node', function () {
 			assert.isFalse(lang.exists('obj3'), 'obj3 does not exist');
 			return parser.parse(dom.byId('toParse').parentNode).then(function () {
@@ -299,6 +422,69 @@ define([
 			stateful1.emit('click');
 			assert(stateful1.prototypeOnclick);
 			assert(stateful1.boolProp1);
+		});
+	});
+
+	test.suite('adaptor', function () {
+		test.test('parse()', function () {
+			return parser.parse('adaptor');
+		});
+		test.test('adaptor construction', function () {
+			assert(adaptor1);
+			assert(adaptor1 instanceof AdaptorClass);
+			assert.isTrue(adaptor1.fromAdaptor);
+			assert.equal('bar', adaptor1.params.foo);
+			assert.equal('qat', adaptor1.bar);
+		});
+	});
+
+	test.suite('startup', function () {
+		test.test('parse()', function () {
+			return parser.parse('start');
+		});
+		test.test('startup called', function () {
+			assert(startup1);
+			assert(startup1 instanceof StartupClass);
+			assert.isTrue(startup1.started);
+		});
+		test.test('parse() with noStart', function () {
+			return parser.parse('nostart', { noStart: true });
+		});
+		test.test('startup not called', function () {
+			assert(startup2);
+			assert(startup2 instanceof StartupClass);
+			assert.isFalse(startup2.started);
+		});
+	});
+
+	test.suite('template', function () {
+		test.test('parse() with template: true', function () {
+			return parser.parse('template', { template: true });
+		});
+		test.test('stopParser ignored', function () {
+			assert(container3, 'container3');
+			assert(container3 instanceof ShieldedContainer);
+			assert(contained5, 'contained5');
+			assert(contained5 instanceof Class1);
+			assert(contained6, 'contained6');
+			assert(contained6 instanceof Class1);
+		});
+	});
+
+	test.suite('parse mixin', function () {
+		test.test('parse() with mixin', function () {
+			return parser.parse('mixin', {
+				mixin: {
+					strProp1: 'bar',
+					strProp2: 'foo'
+				}
+			});
+		});
+		test.test('mixed in properties', function () {
+			assert(mixin1, 'mixin1');
+			assert(mixin1 instanceof Class1);
+			assert.equal('bar', mixin1.strProp1, 'mixin1.strProp1');
+			assert.equal('foo', mixin1.strProp2, 'mixin1.strProp2');
 		});
 	});
 
@@ -355,6 +541,54 @@ define([
 		test.test('set "deep" object', function () {
 			assert(declarative3);
 			assert.equal('text', declarative3.strProp1);
+		});
+	});
+
+	test.suite('declarative mixins', function () {
+		test.test('parse()', function () {
+			return parser.parse('declarativeMixins');
+		});
+		test.test('mixins', function () {
+			assert(resultMixin1, 'resultMixin1');
+			assert.isTrue(resultMixin1.mixin1Done);
+			assert.isTrue(resultMixin1.mixin2Done);
+			assert.isTrue(resultMixin1.amdMixinDone);
+			assert(resultMixin2, 'resultMixin2');
+			assert.isTrue(resultMixin2.mixin1Done);
+			assert.isTrue(resultMixin2.mixin2Done);
+			assert.isTrue(resultMixin2.amdMixinDone);
+			assert(resultMixin3, 'resultMixin3');
+			assert.isTrue(resultMixin3.expectedClass, 'resultMixin3.expectedClass');
+			assert.equal(2, resultMixin3.params.length);
+			assert.strictEqual(Mixin1, resultMixin3.params[0]);
+			assert.strictEqual(Mixin2, resultMixin3.params[1]);
+		});
+	});
+
+	test.suite('errors', function () {
+		test.test('parse() with missing constructor', function () {
+			return parser.parse('throwerror1').then(function () {
+				throw new Error('Should not resolve promise.');
+			}, function (e) {
+				assert(e instanceof Error, 'promise returns error');
+				assert.equal('Cannot resolve constructor function for type(s): NonExistentClass', e.message);
+			});
+		});
+		// Currently, require is not producing a catchable error, therefore cannot reject the promise
+		// test.test('parse() with missing MID', function () {
+		// 	return parser.parse('throwerror2').then(function () {
+		// 		throw new Error('Should not resolve promise.');
+		// 	}, function (e) {
+		// 		assert(e instanceof Error, 'promise returns error');
+		// 	});
+		// });
+		test.test('parse() with constructor throwing an error', function () {
+			return parser.parse('throwerror3').then(function () {
+				throw new Error('Should not resolve promise.');
+			}, function (e) {
+				assert(e instanceof Error, 'promise returns error');
+				assert.equal('Error on construction!', e.message);
+			});
 		});
 	});
 });

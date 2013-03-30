@@ -94,6 +94,10 @@ define([
 		put(body, 'div div#mixin div[data-dojo-type=Class1][data-dojo-id=mixin1]')
 			.setAttribute('data-dojo-props', 'strProp1: "foo"');
 
+		// DOM for propThis
+		put(body, 'div#propThis div[data-dojo-type=Class1][data-dojo-id=propthis1]')
+			.setAttribute('data-dojo-props', 'strProp1: this.baz, strProp2: this.bar');
+
 		// DOM for AMD MID tests
 		var amd = put(body, 'div#amd');
 		put(amd, 'div[data-dojo-type=d2-proto/test/resources/AMDClass1][data-dojo-id=amd1]')
@@ -485,6 +489,23 @@ define([
 			assert(mixin1 instanceof Class1);
 			assert.equal('bar', mixin1.strProp1, 'mixin1.strProp1');
 			assert.equal('foo', mixin1.strProp2, 'mixin1.strProp2');
+		});
+	});
+
+	test.suite('parse propsThis', function () {
+		test.test('parse() with propsThis', function () {
+			return parser.parse('propThis', {
+				propsThis: {
+					baz: 'bar',
+					bar: 'baz'
+				}
+			});
+		});
+		test.test('propsThis used', function () {
+			assert(propthis1, 'propthis1');
+			console.log(propthis1.strProp1);
+			assert.equal('bar', propthis1.strProp1, 'propthis1.strProp1');
+			assert.equal('baz', propthis1.strProp2, 'propthis1.strProp2');
 		});
 	});
 

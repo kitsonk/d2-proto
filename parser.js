@@ -18,6 +18,7 @@ define([
 	var scopeBase = 'dojo',
 		attributeBase = 'data-' + scopeBase + '-',
 		typeAttribute = attributeBase + 'type',
+		typeAttributeSelector = '[' + typeAttribute + ']',
 		propsAttribute = attributeBase + 'props',
 		mixinsAttribute = attributeBase + 'mixins',
 		jsIdAttribute = attributeBase + 'id',
@@ -170,7 +171,7 @@ define([
 		var props;
 
 		try {
-			props = eval.call(this, '({' + value + '})');
+			props = eval('({' + value + '})');
 		}
 		catch (e) {
 			throw new SyntaxError('Error in attribute to object conversion: ' + e.message + '\nAttribute Value: "' +
@@ -499,7 +500,7 @@ define([
 
 				// querySelectorAll is more efficient than the getElementsByTagName, in both dense and sparse
 				// decorated DOMs.
-				qSA('[' + typeAttribute + ']', rootNode).forEach(function (node) {
+				qSA(typeAttributeSelector, rootNode).forEach(function (node) {
 					var mixins = node.getAttribute(mixinsAttribute),
 						type = node.getAttribute(typeAttribute),
 						types = mixins ? [type].concat(mixins.split(/\s*,\s*/)) : [type],
@@ -532,9 +533,9 @@ define([
 					.then(function (modules) {
 						// Attempt to find constructors for modules after an auto-require
 						if (modules.length) {
-							var uid, obj;
-							for (uid in objects) {
-								obj = objects[uid];
+							var id, obj;
+							for (id in objects) {
+								obj = objects[id];
 								try {
 									obj.ctor = obj.ctor || getCtor(obj.types, options.contextRequire);
 								} catch (e) {}
@@ -544,13 +545,13 @@ define([
 					})).then(function (objects) {
 						// Iterate through all the objects, and with those who have a constructor with a `stopParser`
 						// flag = `true`, remove them the list of objects.
-						var uid, obj,
+						var id, obj,
 							o = [];
-						for (uid in objects) {
-							obj = objects[uid];
+						for (id in objects) {
+							obj = objects[id];
 							if (!(options.template) && obj.ctor && obj.ctor.prototype &&
 									obj.ctor.prototype.stopParser) {
-								qSA('[' + typeAttribute + ']', obj.node).forEach(function (node) {
+								qSA(typeAttributeSelector, obj.node).forEach(function (node) {
 									objects[node.__uid].instantiate = false;
 								});
 							}
@@ -577,7 +578,7 @@ define([
 			//			 Option              | Default     | Description
 			//			---------------------|-------------|-------------
 			//			noStart              | `false`     | Whether or not to call `.startup()` on instances.
-			//			propThis             | `undefined` | What to use for ``this`` when evaluating a property attribute string.  This is specifically designed for templates that contain widgets.
+			//			propsThis            | `undefined` | What to use for ``this`` when evaluating a property attribute string.  This is specifically designed for templates that contain widgets.
 			//			mixin                | `undefined` | If present, this Object will be mixed into every Objects configuration object prior to instantiation.
 			//			noDeclarativeRequire | `false`     | If `true` it disables scanning the DOM for declarative requires to increase performance
 			//			noAutoRequire        | `false`     | If `true` disables the ability to auto-require modules.  If auto-require is disabled, any modules not already loaded will cause the parser to error when it attempts to instantiate the object.

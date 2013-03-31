@@ -9,7 +9,6 @@ define([
 	'dojo/on', // on
 	'dojo/promise/all', // all
 	'dojo/when', // when
-	'dojo/domReady!'
 ], function (require, debug, lang, win, aspect, Deferred, dom, on, all, when) {
 
 	// eval is evil, except when it isn't, and it isn't in the parser

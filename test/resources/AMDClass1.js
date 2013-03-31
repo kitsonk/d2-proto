@@ -11,6 +11,11 @@ define([
 		arrProp1: null,
 		arrProp2: null,
 		objProp1: null,
-		objProp2: null
+		objProp2: null,
+		boolProp1: false,
+		boolProp2: true,
+		numProp1: 0,
+		numProp2: 1,
+		funcProp1: null
 	});
 });

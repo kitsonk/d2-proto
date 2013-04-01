@@ -8,14 +8,15 @@ define([
 	}, {
 		strProp1: '',
 		strProp2: 'test',
-		arrProp1: [],
-		arrProp2: [],
-		objProp1: {},
-		objProp2: {},
+		arrProp1: null,
+		arrProp2: null,
+		objProp1: null,
+		objProp2: null,
 		boolProp1: false,
 		boolProp2: true,
 		numProp1: 0,
 		numProp2: 1,
-		funcProp1: function () {}
+		funcProp1: null,
+		stopParser: true
 	});
 });

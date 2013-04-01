@@ -1,8 +1,9 @@
 define([], function () {
+	'use strict';
+
 	// module:
 	//		dojo/aspect
 
-	'use strict';
 	var undefined,
 		nextId = 0;
 

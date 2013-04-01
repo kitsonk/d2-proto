@@ -9,6 +9,7 @@ define([
 	'../Evented',
 	'./registry'
 ], function (win, aspect, dom, on, compose, lang, put, Evented, registry) {
+	'use strict';
 
 	var property = compose.property,
 		required = compose.required,

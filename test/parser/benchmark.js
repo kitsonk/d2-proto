@@ -128,6 +128,41 @@ define([
 				});
 			}
 		});
+		bench.test('no auto-require/declarative require', {
+			'defer': true,
+			'setup': function () {
+				parser._clear();
+				createBasicDom(document.body);
+			},
+			'teardown': function () {
+				emptyDom(document.body);
+			},
+			'fn': function (dfd) {
+				parser.parse({
+					noDeclarativeRequire: true,
+					noAutoRequire: true
+				}).then(function () {
+					dfd.resolve();
+				});
+			}
+		});
+		bench.test('no custom attributes', {
+			'defer': true,
+			'setup': function () {
+				parser._clear();
+				createBasicDom(document.body);
+			},
+			'teardown': function () {
+				emptyDom(document.body);
+			},
+			'fn': function (dfd) {
+				parser.parse({
+					noCustomAttributes: true
+				}).then(function () {
+					dfd.resolve();
+				});
+			}
+		});
 	});
 
 });

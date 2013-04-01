@@ -11,13 +11,10 @@ define([
 	'dojo/when', // when
 ], function (require, debug, lang, win, aspect, Deferred, dom, on, all, when) {
 
-	// eval is evil, except when it isn't, and it isn't in the parser
-	/* jshint evil:true */
-
 	var scopeBase = 'dojo',
 		attributeBase = 'data-' + scopeBase + '-',
 		typeAttribute = attributeBase + 'type',
-		typeAttributeSelector = '[' + typeAttribute + ']',
+		typeSelector,  // this is assigned in the scan function
 		propsAttribute = attributeBase + 'props',
 		mixinsAttribute = attributeBase + 'mixins',
 		jsIdAttribute = attributeBase + 'id',
@@ -29,7 +26,7 @@ define([
 		scriptPropAttribute = attributeBase + 'prop',
 		scriptMethodAttribute = attributeBase + 'method',
 		scriptTypeBase = scopeBase + '/',
-		scriptTypeRegEx = /^dojo\/\w/i;
+		scriptTypeRE = new RegExp('^' + scopeBase + '\\/\\w', 'i');
 
 	var ctorMap = {};
 	function getCtor(types, contextRequire) {
@@ -45,9 +42,13 @@ define([
 		//		The context `require()` that should be used to resolve the MIDs
 		// returns: Object
 		//		An object that is intended to be a constructor prototype to be instantiated.
+		'use strict';
+
 		var ts = types.join();
 		if (!ctorMap[ts]) {
 			var mixins = types.map(function (t) {
+				// The assignment on the return is intentional
+				/*jshint boss:true */
 				return ctorMap[t] = ctorMap[t] || (~t.indexOf('/') && contextRequire(t)) || lang.getObject(t);
 			});
 			if (mixins.length > 1) {
@@ -69,6 +70,7 @@ define([
 		// contextRequire: Function
 		//		The context `require()` to be used for resolving the modules.
 		// returns: dojo/promise/Promise
+		'use strict';
 
 		var dfd = new Deferred();
 		if (mids && mids.length) {
@@ -98,9 +100,12 @@ define([
 		// contextRequire: Function
 		//		The contextual `require()` to be used for resolving modules.
 		// returns: dojo/promise/Promise
+		'use strict';
 
 		var dfd = new Deferred();
 
+		// Using eval is the only way to convert an non-JSON arbitrary text string to a JavaScript object
+		/*jshint evil:true */
 		var midHash = eval('({' + node.innerHTML + '})'),
 			vars = [],
 			mids = [];
@@ -118,7 +123,8 @@ define([
 				});
 				dfd.resolve(args);
 			});
-		} catch (e) {
+		}
+		catch (e) {
 			dfd.reject(e);
 		}
 
@@ -147,6 +153,8 @@ define([
 		}
 
 		try {
+			// This is the only way to convert declarative scripting into a function
+			/*jshint evil:true */
 			fn = new Function(args ? args.split(/\s*,\s*/) : [], prefix + script.innerHTML + suffix);
 		}
 		catch (e) {
@@ -166,10 +174,13 @@ define([
 		// summary:
 		//		eval is evil, except when it isn't.  There is no other way to take a text string and convert it into a
 		//		JavaScript object.
+		'use strict';
 
 		var props;
 
 		try {
+			// This is the only way to convert a non-JSON string into a JavaScript object
+			/*jshint evil:true */
 			props = eval('({' + value + '})');
 		}
 		catch (e) {
@@ -188,6 +199,7 @@ define([
 		//		The object that contains a obj.node and obj.proto
 		// returns: Object
 		//		A hash of properties to use to instantiate the object
+		'use strict';
 
 		var props = {};
 		if (obj.node && obj.proto) {
@@ -220,6 +232,8 @@ define([
 					}
 					break;
 				case 'function':
+					// This is the only way to convert a string passed as a function argument into a function
+					/*jshint evil:true */
 					props[p] = lang.getObject(v, false) || new Function(v);
 					obj.node.removeAttribute(p);
 					break;
@@ -237,6 +251,7 @@ define([
 		//		The node that is the parent of any potential script nodes.
 		// returns: Array
 		//		This will be the array of script nodes that contain declarative scripting.
+		'use strict';
 
 		var scripts = [],
 			child = node.firstChild,
@@ -245,7 +260,7 @@ define([
 			if (child.nodeType === 1) {
 				if (child.nodeName.toLowerCase() === 'script') {
 					type = child.getAttribute('type');
-					if (type && scriptTypeRegEx.test(type)) {
+					if (type && scriptTypeRE.test(type)) {
 						scripts.push(child);
 					}
 				}
@@ -263,6 +278,7 @@ define([
 		//		The CSS selector
 		// node: DOMNode
 		//		The node to server as root for the query
+		'use strict';
 
 		return Array.prototype.slice.call(node.querySelectorAll(selector));
 	}
@@ -288,9 +304,15 @@ define([
 			// options: Object?
 			//		A hash of options.  See .parse() for details.
 			// returns: Array
+			'use strict';
 
 			options = options || {};
 			options.contextRequire = options.contextRequire = require;
+
+			// These can be overriden by passing them in the options hash.  Once they are set, they are persisted
+			// on subsequent parses until changed again.
+			propsAttribute = options.propsAttribute || propsAttribute;
+			jsIdAttribute = options.jsIdAttribute || jsIdAttribute;
 
 			var instances,
 				propsAttr,
@@ -320,6 +342,9 @@ define([
 			}
 
 			instances = objects.map(function (obj) {
+				// This is a complex function, it could be broken down further, but that would only add to confusion
+				// regarding the code.
+				/*jshint maxcomplexity:12 */
 				if (!obj.ctor) {
 					obj = resolveCtor(obj);
 				}
@@ -468,11 +493,18 @@ define([
 			// options: Object?
 			//		A hash of options.  See .parse() for details.
 			// returns: dojo/promise/Promise
+			'use strict';
 
 			// setup rootNode and options if not provided
 			rootNode = rootNode || win.body();
 			options = options || {};
 			options.contextRequire = options.contextRequire || require;
+
+			// These can be overriden by passing them in the options hash.  Once they are set, they are persisted
+			// on subsequent parses until changed again.
+			typeAttribute = options.typeAttribute || typeAttribute;
+			typeSelector = options.typeSelector || '[' + typeAttribute + ']';
+			mixinsAttribute = options.mixinsAttribute || mixinsAttribute;
 
 			if (typeof rootNode === 'string') {
 				rootNode = dom.byId(rootNode);
@@ -499,7 +531,7 @@ define([
 
 				// querySelectorAll is more efficient than the getElementsByTagName, in both dense and sparse
 				// decorated DOMs.
-				qSA(typeAttributeSelector, rootNode).forEach(function (node) {
+				qSA(typeSelector, rootNode).forEach(function (node) {
 					var mixins = node.getAttribute(mixinsAttribute),
 						type = node.getAttribute(typeAttribute),
 						types = mixins ? [type].concat(mixins.split(/\s*,\s*/)) : [type],
@@ -507,7 +539,8 @@ define([
 
 					try {
 						ctor = getCtor(types, options.contextRequire);
-					} catch (e) {
+					}
+					catch (e) {
 						types.forEach(function (mid) {
 							if (~mid.indexOf('/') && !midHash[mid]) {
 								mids.push(mid);
@@ -537,7 +570,8 @@ define([
 								obj = objects[id];
 								try {
 									obj.ctor = obj.ctor || getCtor(obj.types, options.contextRequire);
-								} catch (e) {}
+								}
+								catch (e) {}
 							}
 						}
 						return objects;
@@ -550,7 +584,7 @@ define([
 							obj = objects[id];
 							if (!(options.template) && obj.ctor && obj.ctor.prototype &&
 									obj.ctor.prototype.stopParser) {
-								qSA(typeAttributeSelector, obj.node).forEach(function (node) {
+								qSA(typeSelector, obj.node).forEach(function (node) {
 									objects[node.__uid].instantiate = false;
 								});
 							}
@@ -583,8 +617,11 @@ define([
 			//			noAutoRequire        | `false`     | If `true` disables the ability to auto-require modules.  If auto-require is disabled, any modules not already loaded will cause the parser to error when it attempts to instantiate the object.
 			//			noCustomAttributes   | `false`     | If `true` disables the ability to use custom attributes to set properties on instantiation of the object.  Only recognises `data-dojo-props` to set instantiation properties.
 			//			contextRequire       | `undefined` | Used to provide a context aware `require()` to be used for module resolution.  If not provided, defaults to the context of the parser module.
+			//			typeAttribute        | `undefined` | If supplied, this will be the attribute used to identify what type of object needs to be instantiated.  Once supplied it overrides the default of "data-dojo-type" for the lifetime of the instance of the parser.
+			//			typeSelector         | `undefined` | If supplied, this will be the CSS selector for identifying nodes to be instantiated.  Once supplied it overrides the default of "[data-dojo-type]" for the lifetime of the instance of the parser.
 			//
 			// returns: dojo/promise/Promise
+			'use strict';
 
 			// For backwards compatibility with Dijit 1.X at the moment, we need to adjust arguments, because it will
 			// sometimes pass a single argument of options instead of a `parse(null, {})`.

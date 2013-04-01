@@ -15,10 +15,6 @@ define([
 	'dojo/domReady!'
 ], function (require, test, assert, declare, lang, dom, Evented, Stateful, parser, put) {
 
-	// Because there are many variables created in the global scope that are not present for the tests, turning off
-	// the undefined warning for jshint:
-	/* jshint undef: false */
-
 	// Create test DOM
 	function createDom(body) {
 		put(body, 'h1', { innerHTML: 'Parser Unit Test' });
@@ -135,6 +131,16 @@ define([
 		put(declarativeMixins, 'div[data-dojo-type=ClassForMixins][data-dojo-id=resultMixin2][data-dojo-mixins=Mixin1, Mixin2, ./test/resources/AMDMixin]');
 		put(declarativeMixins, 'div[data-dojo-type=MyNonDojoClass][data-dojo-id=resultMixin3][data-dojo-mixins=Mixin1,Mixin2]');
 
+		// DOM for data-type tests
+		var dataType = put(body, 'div#dataType');
+		put(dataType, 'div[data-type=Class1][data-id=type1]').setAttribute('data-props', 'strProp1: "other"');
+		put(dataType, 'div[data-dojo-type=Class1][data-dojo-id=type2]');
+
+		// DOM for custom selector
+		var customSelector = put(body, 'div#customSelector');
+		put(customSelector, 'div[data-type=Class1][data-id=type3]');
+		put(customSelector, 'div[data-type=Class1][data-custom][data-id=type4]');
+
 		// DOM for parser error handling tests
 		put(body, 'div#throwerror1 div[data-dojo-type=NonExistentClass][data-dojo-id=noclass1]');
 		put(body, 'div#throwerror2 div[data-dojo-type=some/bad/MID][data-dojo-id=noclass2]');
@@ -144,6 +150,7 @@ define([
 	createDom(document.body);
 
 	lang.setObject('MyNonDojoClass', function () {});
+
 	MyNonDojoClass.extend = function () {
 		var args = arguments;
 		return function () {
@@ -610,6 +617,32 @@ define([
 				assert(e instanceof Error, 'promise returns error');
 				assert.equal('Error on construction!', e.message);
 			});
+		});
+	});
+
+	test.suite('custom attributes and selectors', function () {
+		test.test('parse() with custom attributes', function () {
+			return parser.parse('dataType', {
+				typeAttribute: 'data-type',
+				propsAttribute: 'data-props',
+				jsIdAttribute: 'data-id'
+			});
+		});
+		test.test('validate custom attributes', function () {
+			assert(type1, 'type1');
+			assert(type1 instanceof Class1);
+			assert.equal('other', type1.strProp1, 'type1.strProp1');
+			assert.isFalse(lang.exists('type2'), 'type2');
+		});
+		test.test('parse() with custom selector', function () {
+			return parser.parse('customSelector', {
+				typeSelector: '[data-type][data-custom]'
+			});
+		});
+		test.test('validate custom selector', function () {
+			assert.isFalse(lang.exists('type3'), 'type3');
+			assert(type4);
+			assert(type4 instanceof Class1);
 		});
 	});
 });

@@ -2,14 +2,13 @@ define([
 	'require',
 	'./debug', // debug.warn
 	'dojo/_base/lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
-	'dojo/_base/window', // win.body
 	'./aspect', // aspect.before, aspect.around, aspect.after
 	'dojo/Deferred', // Deferred
 	'dojo/dom', // dom.byId
 	'dojo/on', // on
 	'dojo/promise/all', // all
 	'dojo/when', // when
-], function (require, debug, lang, win, aspect, Deferred, dom, on, all, when) {
+], function (require, debug, lang, aspect, Deferred, dom, on, all, when) {
 
 	var scopeBase = 'dojo',
 		attributeBase = 'data-' + scopeBase + '-',
@@ -345,20 +344,23 @@ define([
 				// This is a complex function, it could be broken down further, but that would only add to confusion
 				// regarding the code.
 				/*jshint maxcomplexity:12 */
+
+				// If still don't have constructor, this is our last chance to resolve it
 				if (!obj.ctor) {
 					obj = resolveCtor(obj);
 				}
 				obj.proto = obj.ctor && obj.ctor.prototype;
 
-				propsAttr = obj.node.getAttribute(propsAttribute);
-				dojoAttachPoint = obj.node.getAttribute(attachPointAttribute);
-				dojoAttachEvent = obj.node.getAttribute(attachEventAttribute);
+				// Attempts to map individual attributes to properties of the prototype which can be disabled by setting
+				// the noCustomAttributes option
 				props = options.noCustomAttributes ? {} : getProps.call(options.propsThis, obj);
 
+				dojoAttachPoint = obj.node.getAttribute(attachPointAttribute);
 				if (dojoAttachPoint) {
 					props.dojoAttachPoint = dojoAttachPoint;
 				}
 
+				dojoAttachEvent = obj.node.getAttribute(attachEventAttribute);
 				if (dojoAttachEvent) {
 					props.dojoAttachEvent = dojoAttachEvent;
 				}
@@ -368,10 +370,12 @@ define([
 					props['class'] = obj.node.className;
 				}
 				if (obj.node.style.cssText && !props.style) {
-					obj.node.style.cssText;
+					props.style = obj.node.style.cssText;
 				}
 
-				// Items from the data-dojo-props overrides anything derived from the attributes
+				// Items from the data-dojo-props override anything derived from the attributes, by convention the value
+				// of propsAttribute is a JavaScript object without the enclosing { }
+				propsAttr = obj.node.getAttribute(propsAttribute);
 				if (propsAttr) {
 					props = lang.mixin(props, convertPropsString.call(options.propsThis, propsAttr));
 				}
@@ -387,8 +391,11 @@ define([
 				}
 
 				scripts = [];
+				// The constructor can turn off declarative scripting by setting the ._noScript flag in either the
+				// constructor or the prototype
 				if (!((obj.ctor && obj.ctor._noScript) || (obj.proto && obj.proto._noScript))) {
 					getScriptNodes(obj.node).forEach(function (script) {
+						// Removing a script node from the DOM so it isn't seen again
 						obj.node.removeChild(script);
 						scriptType = script.getAttribute('type');
 						switch (scriptType) {
@@ -496,7 +503,7 @@ define([
 			'use strict';
 
 			// setup rootNode and options if not provided
-			rootNode = rootNode || win.body();
+			rootNode = rootNode || document.body;
 			options = options || {};
 			options.contextRequire = options.contextRequire || require;
 
@@ -631,16 +638,16 @@ define([
 				}
 				else {
 					options = rootNode;
-					rootNode = options.rootNode || win.body();
+					rootNode = options.rootNode || document.body;
 				}
 			}
 			else {
-				rootNode = rootNode || win.body();
+				rootNode = rootNode || document.body;
 				options = options || {};
 			}
 
-			// This should be the simplified version of the arguments in the future:
-			// rootNode = rootNode || win.body();
+			// In the future this should just be simplified to:
+			// rootNode = rootNode || document.body;
 			// options = options || {};
 
 			var self = this;

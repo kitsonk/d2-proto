@@ -1,10 +1,10 @@
 define([
 	'require',
 	'./debug', // debug.warn
-	'dojo/_base/lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
+	'./lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
 	'./aspect', // aspect.before, aspect.around, aspect.after
 	'dojo/Deferred', // Deferred
-	'dojo/dom', // dom.byId
+	'./dom', // dom.byId
 	'dojo/on', // on
 	'dojo/promise/all', // all
 	'dojo/when', // when

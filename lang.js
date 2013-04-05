@@ -1,7 +1,6 @@
 define([
 	'./properties'
 ], function (properties) {
-	'use strict';
 
 	function _mixin(dest, source, copyFunc) {
 		// summary:
@@ -57,7 +56,31 @@ define([
 		}; // Function
 	}
 
-	return {
+	function getProp(/*Array*/parts, /*Boolean*/create, /*Object*/context) {
+		var p,
+			i = 0,
+
+			// I cannot find anything that provides access to the global scope under "use strict"
+			global = (function () {
+			    return this;
+			}());
+
+		if (!context) {
+			if (!parts.length) {
+				return global;
+			}
+			else {
+				p = parts[i++];
+				context = p in global ? global[p] : (create ? global[p] = {} : undefined);
+			}
+		}
+		while (context && (p = parts[i++])) {
+			context = (p in context ? context[p] : (create ? context[p] = {} : undefined));
+		}
+		return context; // mixed
+	}
+
+	var lang = {
 		// summary:
 		//		This module defines Javascript language extensions.
 
@@ -192,6 +215,85 @@ define([
 			return !scope ? method : function () {
 				return method.apply(scope, arguments || []);
 			}; // Function
+		},
+
+		setObject: function (name, value, context) {
+			// summary:
+			//		Set a property from a dot-separated string, such as "A.B.C"
+			// description:
+			//		Useful for longer api chains where you have to test each object in
+			//		the chain, or when you have an object reference in string format.
+			//		Objects are created as needed along `path`. Returns the passed
+			//		value if setting is successful or `undefined` if not.
+			// name: String
+			//		Path to a property, in the form "A.B.C".
+			// value: anything
+			//		value or object to place at location given by name
+			// context: Object?
+			//		Optional. Object to use as root of path. Defaults to
+			//		`dojo.global`.
+			// example:
+			//		set the value of `foo.bar.baz`, regardless of whether
+			//		intermediate objects already exist:
+			//	| lang.setObject("foo.bar.baz", value);
+			// example:
+			//		without `lang.setObject`, we often see code like this:
+			//	| // ensure that intermediate objects are available
+			//	| if(!obj["parent"]){ obj.parent = {}; }
+			//	| if(!obj.parent["child"]){ obj.parent.child = {}; }
+			//	| // now we can safely set the property
+			//	| obj.parent.child.prop = "some value";
+			//		whereas with `lang.setObject`, we can shorten that to:
+			//	| lang.setObject("parent.child.prop", "some value", obj);
+
+			var parts = name.split('.'), p = parts.pop(), obj = getProp(parts, true, context);
+			return obj && p ? (obj[p] = value) : undefined; // Object
+		},
+
+		getObject: function (name, create, context) {
+			// summary:
+			//		Get a property from a dot-separated string, such as "A.B.C"
+			// description:
+			//		Useful for longer api chains where you have to test each object in
+			//		the chain, or when you have an object reference in string format.
+			// name: String
+			//		Path to an property, in the form "A.B.C".
+			// create: Boolean?
+			//		Optional. Defaults to `false`. If `true`, Objects will be
+			//		created at any point along the 'path' that is undefined.
+			// context: Object?
+			//		Optional. Object to use as root of path. Defaults to
+			//		'dojo.global'. Null may be passed.
+			return getProp(name.split('.'), create, context); // Object
+		},
+
+		exists: function (name, obj) {
+			// summary:
+			//		determine if an object supports a given method
+			// description:
+			//		useful for longer api chains where you have to test each object in
+			//		the chain. Useful for object and method detection.
+			// name: String
+			//		Path to an object, in the form "A.B.C".
+			// obj: Object?
+			//		Object to use as root of path. Defaults to
+			//		'dojo.global'. Null may be passed.
+			// example:
+			//	| // define an object
+			//	| var foo = {
+			//	|		bar: { }
+			//	| };
+			//	|
+			//	| // search the global scope
+			//	| lang.exists("foo.bar"); // true
+			//	| lang.exists("foo.bar.baz"); // false
+			//	|
+			//	| // search from a particular scope
+			//	| lang.exists("bar", foo); // true
+			//	| lang.exists("bar.baz", foo); // false
+			return lang.getObject(name, false, obj) !== undefined; // Boolean
 		}
 	};
+
+	return lang;
 });

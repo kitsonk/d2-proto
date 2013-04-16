@@ -214,7 +214,7 @@ define([
 			//		called directly, without the `new` keyword.
 			// returns: Object
 			//		The constructed object
-			
+
 			var instance = this instanceof Constructor ? this : Object.create(proto);
 			for (var i = 0; i < constructorsLength; i++) {
 				var constructor = constructors[i],

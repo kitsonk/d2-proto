@@ -279,6 +279,8 @@ define([
 		//		The node to server as root for the query
 		'use strict';
 
+		// Because the default selector "[data-dojo-type]" does not return unexpected results for rooted queries, we
+		// can just use qSA directly.
 		return Array.prototype.slice.call(node.querySelectorAll(selector));
 	}
 

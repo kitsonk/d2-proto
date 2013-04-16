@@ -181,6 +181,12 @@ define([
 					}
 				}
 			},
+			querySelectorAll: function (selector) {
+				// TODO
+			},
+			matches: function (selector) {
+				// TODO
+			},
 			innerHTML: property({
 				get: function () {
 					return this.children.join('');
@@ -205,25 +211,55 @@ define([
 			ampersandRE = /&/g,
 			namespacePrefixes = {};
 
-		var doc = {
-			createElement: function (tag) {
-				return new Element(tag);
+		var doc = Object.create(Object.prototype, {
+			createElement: {
+				value: function (tag) {
+					return new Element(tag);
+				},
+				enumerable: true
 			},
-			createElementNS: function (uri, tag) {
-				return new Element(namespacePrefixes[uri] + ':' + tag);
+			createElementNS: {
+				value: function (uri, tag) {
+					return new Element(namespacePrefixes[uri] + ':' + tag);
+				},
+				enumerable: true
 			},
-			createTextNode: function (value) {
-				return (typeof value === 'string' ? value : ('' + value)).replace(lessThanRE, '&lt;')
-					.replace(ampersandRE, '&amp;');
+			createTextNode: {
+				value: function (value) {
+					return (typeof value === 'string' ? value : ('' + value)).replace(lessThanRE, '&lt;')
+						.replace(ampersandRE, '&amp;');
+				},
+				enumerable: true
 			},
-			createDocumentFragment: function () {
-				return new DocumentFragment();
+			createDocumentFragment: {
+				value: function () {
+					return new DocumentFragment();
+				},
+				enumerable: true
 			},
-			getElementById: function (id) {
-				// TODO
+			getElementById: {
+				value: function (id) {
+					// TODO
+				},
+				enumerable: true
 			},
-			indentation: '  '
-		};
+			querySelectorAll: {
+				value: function (selector) {
+					// TODO
+				},
+			},
+			body: {
+				get: function () {
+					// TODO
+					return null;
+				},
+				enumerable: true
+			},
+			indentation: {
+				value: '    ',
+				writable: true
+			}
+		});
 
 		return doc;
 	}

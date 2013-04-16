@@ -164,6 +164,34 @@ define([
 		}
 		=====*/
 
+		clone: function (src) {
+			if (!src || typeof src !== 'object' || src.toString() === '[object Function]') {
+				return src;
+			}
+			if (src.nodeType && 'cloneNode' in src) {
+				return src.cloneNode(true);
+			}
+			if (src instanceof Date) {
+				return new Date(src.getTime());
+			}
+			if (src instanceof RegExp) {
+				return new RegExp(src);
+			}
+			var r, i;
+			if (src instanceof Array || typeof src === 'array') {
+				r = [];
+				for (i = 0; i < src.length; i++) {
+					if (i in src) {
+						r[i] = lang.clone(src[i]);
+					}
+				}
+			}
+			else {
+				r = Object.create(src.prototype || src);
+			}
+			return _mixin(r, src, lang.clone);
+		},
+
 		hitch: function (scope, method) {
 			// summary:
 			//		Returns a function that will only ever execute in the a given scope.

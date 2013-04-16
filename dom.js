@@ -4,28 +4,72 @@ define([
 ], function (doc, has) {
 	'use strict';
 
+	has.add('dom-element-matches', function () {
+		// This is slightly more robust than what is in dojo/selector/lite in that it returns the function name out of
+		// the prototype, which can then be used as a key on Elements directly.
+
+		// Also, currently the has API doesn't recognise the pseudo DOM and therefore the passed arguments to the
+		// function to detect the capabilities
+		var element = doc.createElement('div'),
+			matchesFunctionName = 'matches' in element ? 'matches' : false;
+		if (!matchesFunctionName) {
+			['moz', 'webkit', 'ms', 'o'].some(function (vendorPrefix) {
+				return vendorPrefix + 'MatchesSelector' in element ?
+					matchesFunctionName = vendorPrefix + 'MatchesSelector' : false;
+			});
+		}
+		return matchesFunctionName;
+	});
+
+	has.add('css-user-select', function (global, doc, element) {
+		if (!element) {
+			return false;
+		}
+
+		var style = element.style,
+			prefixes = ['Khtml', 'O', 'ms', 'Moz', 'Webkit'],
+			i = prefixes.length,
+			name = 'userSelect';
+
+		do {
+			if (typeof style[name] !== 'undefined') {
+				return name;
+			}
+		}
+		while (i-- && (name = prefixes[i] + 'UserSelect'));
+
+		return false;
+	});
+
 	// if it has any of these combinators, it is probably going to be faster with a document fragment
 	var fragmentFasterHeuristicRE = /[-+,> ]/,
 
 		selectorRE = /(?:\s*([-+ ,<>]))?\s*(\.|!\.?|#)?([-\w%$|]+)?(?:\[([^\]=]+)=?['"]?([^\]'"]*)['"]?\])?/g,
 		namespaces = false,
-		namespaceIndex;
+		namespaceIndex,
 
-	function insertTextNode(node, text) {
+		// This matches query selectors that are faster to handle via other methods than qSA
+		fastPathRE = /^([\w]*)#([\w\-]+$)|^(\.)([\w\-\*]+$)|^(\w+$)/,
+
+		// Used to split union selectors into separate entities
+		unionSplitRE = /([^\s,](?:"(?:\\.|[^"])+"|'(?:\\.|[^'])+'|[^,])*)/g;
+
+	function insertTextNode(doc, node, text) {
 		node.appendChild(doc.createTextNode(text));
 	}
 
 	function get(id) {
-		return ((typeof id === 'string') ? doc.getElementById(id) : id) || null;
+		return ((typeof id === 'string') ? this.doc.getElementById(id) : id) || null;
 	}
 
 	function put(node/*, selectors...*/) {
 		var args = arguments,
 			// use the first argument as the default return value in case only a DOM Node is passed in
-			returnValue = args[0],
+			returnValue = node,
 			argument;
 
-		var fragment,
+		var thisDoc = this.doc,
+			fragment,
 			referenceNode,
 			currentNode,
 			nextSibling,
@@ -36,7 +80,7 @@ define([
 			if (currentNode && referenceNode && currentNode !== referenceNode) {
 				(referenceNode === node &&
 					(fragment ||
-						(fragment = fragmentFasterHeuristicRE.test(argument) && doc.createDocumentFragment()))
+						(fragment = fragmentFasterHeuristicRE.test(argument) && thisDoc.createDocumentFragment()))
 						|| referenceNode).insertBefore(currentNode, nextSibling || null);
 			}
 		}
@@ -80,13 +124,13 @@ define([
 			var tag = !prefix && value;
 			if (tag || (!currentNode && (prefix || attrName))) {
 				if (tag === '$') {
-					insertTextNode(referenceNode, args[++i]);
+					insertTextNode(thisDoc, referenceNode, args[++i]);
 				}
 				else {
 					tag = tag || dom.defaultTag;
 					currentNode = namespaces && ~(namespaceIndex = tag.indexOf('|')) ?
-						doc.createElementNS(namespaces[tag.slice(0, namespaceIndex)], tag.slice(namespaceIndex + 1)) :
-						doc.createElement(tag);
+						thisDoc.createElementNS(namespaces[tag.slice(0, namespaceIndex)], tag.slice(namespaceIndex + 1)) :
+						thisDoc.createElement(tag);
 				}
 			}
 			if (prefix) {
@@ -143,9 +187,10 @@ define([
 				lastSelectorArg = false;
 				if (argument instanceof Array) {
 					// an Array
-					currentNode = doc.createDocumentFragment();
+					currentNode = thisDoc.createDocumentFragment();
+					var self = this;
 					argument.forEach(function (item) {
-						currentNode.appendChild(put(item));
+						currentNode.appendChild(put.call(self, item));
 					});
 					argument = currentNode;
 				}
@@ -164,7 +209,7 @@ define([
 			}
 			else if (lastSelectorArg) {
 				lastSelectorArg = false;
-				insertTextNode(currentNode, argument);
+				insertTextNode(thisDoc, currentNode, argument);
 			}
 			else {
 				if (i < 1) {
@@ -185,44 +230,149 @@ define([
 		return returnValue;
 	}
 
-	function add(node/*, selectors...*/) {
+	function query(/*selectors...*/) {
+		var args = arguments,
+			argument,
+			results = [],
+			node = this.doc,
+			thisDoc = this.doc,
+			self = this,
+			fastPath,
+			fastPathResults,
+			i;
 
-	}
+		function rootQuerySelectorAll(root, selector) {
+			var origRoot = root,
+				rQSA = root.querySelectorAll,
+				oldId = root.getAttribute('id'),
+				newId = oldId || '__dojo__',
+				hasParent = root.parentNode,
+				relativeHierarchySelector = /^\s*[+~]/.test(selector),
+				selectors,
+				i = 0;
 
-	function query(/*selectors.../) {
+			if (relativeHierarchySelector && !hasParent) {
+				// This is a "bad" query that simply won't return anything, so why even try
+				return [];
+			}
+			if (!oldId) {
+				// If the node doesn't have an ID, let's give it one
+				root.setAttribute('id', newId);
+			}
+			else {
+				newId = newId.replace(/'/g, '\\$&');
+			}
+			if (relativeHierarchySelector && hasParent) {
+				root = root.parentNode;
+			}
+			selectors = selector.match(unionSplitRE);
+			for (; i < selectors.length; i++) {
+				selectors[i] = '[id=\'' + newId + '\'] ' + selectors[i];
+			}
+			selector = selectors.join(',');
 
-	}
-
-	function remove(/*selectors...*/) {
-
-	}
-
-	has.add('css-user-select', function (global, doc, element) {
-		if (!element) {
-			return false;
+			try {
+				return Array.prototype.slice.call(rQSA.call(root, selector));
+			}
+			finally {
+				if (!oldId) {
+					origRoot.removeAttribute('id');
+				}
+			}
 		}
 
-		var style = element.style,
-			prefixes = ['Khtml', 'O', 'ms', 'Moz', 'Webkit'],
-			i = prefixes.length,
-			name = 'userSelect';
+		function fastPathQuery(root, selectorMatch) {
+			var parent,
+				found;
 
-		do {
-			if (typeof style[name] !== 'undefined') {
-				return name;
+			if (selectorMatch[2]) {
+				// Looks like we are selecting and ID
+				found = get.call(self, selectorMatch[2]);
+				if (!found || (selectorMatch[1] && selectorMatch[1] !== found.tagName.toLowerCase())) {
+					// Either ID wasn't found or there was a tag qualified it didn't match
+					return [];
+				}
+				if (root !== thisDoc) {
+					// There is a root element, let's make sure it is in the ancestry try
+					parent = found;
+					while (parent !== node) {
+						parent = parent.parentNode;
+						if (!parent) {
+							// Ooops, silly person tried selecting an ID that isn't a descendent of the root node
+							return [];
+						}
+					}
+				}
+				// if there is part of the selector that hasn't been resolved, then we have to pass it back to
+				// query to further resolve, otherwise we append it to the results
+				return selectorMatch[3] ? query(found, selectorMatch[3]) : [ found ];
 			}
-		} while (i-- && (name = prefixes[i] + 'UserSelect'));
+			if (selectorMatch[3] && root.getElementsByClassName) {
+				// a .class selector
+				return Array.prototype.slice.call(root.getElementsByClassName(selectorMatch[4]));
+			}
+			if (selectorMatch[5]) {
+				// a tag
+				return Array.prototype.slice.call(root.getElementsByTagName(selectorMatch[5]));
+			}
+		}
 
-		return false;
-	});
+		for (i = 0; i < args.length; i++) {
+			argument = args[i];
+			if ((typeof argument === 'object' && argument && argument.nodeType) || !argument) {
+				// this argument is a node and is now the subject of subsequent selectors
+				node = argument;
+				continue;
+			}
+			if (!node) {
+				// There is no subject node at the moment, continue consuming arguments
+				continue;
+			}
+			if (typeof argument === 'string') {
+				// It is assumed all strings are selectors
+				fastPath = fastPathRE.exec(argument);
+				if (fastPath) {
+					// Quicker to not use qSA
+					fastPathResults = fastPathQuery(node, fastPath);
+				}
+				if (fastPathResults) {
+					// There were results returned from fastPathQuery
+					results = results.concat(fastPathResults);
+				}
+				else {
+					// qSA should be faster
+					if (node === thisDoc) {
+						// This is a non-rooted query, just use qSA
+						results = results.concat(Array.prototype.slice.call(node.querySelectorAll(argument)));
+					}
+					else {
+						// This is a rooted query, and qSA is really strange in its behaviour, in that it will return
+						// nodes that match the selector, irrespective of the context of the root node
+						results = results.concat(rootQuerySelectorAll(node, argument));
+					}
+				}
+			}
+			else if (argument) {
+				throw new TypeError('Invalid argument type of: "' + typeof argument + '"');
+			}
+		}
 
+		return results;
+	}
+
+	function remove(node/*, selectors...*/) {
+
+	}
+
+	// This all probably needs to be moved somewhere else, but it exists in dojo/dom and doesn't have another home at
+	// the moment.
 	var cssUserSelect = has('css-user-select');
 
 	var setSelectable = cssUserSelect ? function (node, selectable) {
 		// css-user-select returns a (possibly vendor-prefixed) CSS property name
-		byId(node).style[cssUserSelect] = selectable ? '' : 'none';
+		get(node).style[cssUserSelect] = selectable ? '' : 'none';
 	} : function (node, selectable) {
-		node = byId(node);
+		node = get(node);
 
 		var nodes = node.getElementsByTagName('*'),
 			i = nodes.length;
@@ -243,7 +393,7 @@ define([
 		}
 	};
 
-	var dom = Object.create(Object.prototype, {
+	var descriptors = {
 		get: {
 			value: get,
 			enumerable: true
@@ -252,16 +402,12 @@ define([
 			value: put,
 			enumerable: true
 		},
-		add: {
-			value: add,
-			enumerable: true
-		},
 		query: {
 			value: query,
 			enumerable: true
 		},
 		remove: {
-			value: add,
+			value: remove,
 			enumerable: true
 		},
 		setSelectable: {
@@ -278,8 +424,30 @@ define([
 				(namespaces || (namespaces = {}))[name] = uri;
 			},
 			enumerable: true
+		},
+		doc: {
+			value: doc,
+			writable: true,
+			enumerable: true
 		}
-	});
+	};
+
+	var proto = Object.create(Object.prototype, descriptors);
+
+	function Dom(doc) {
+		this.doc = doc;
+	}
+
+	proto.constructor = Dom;
+
+	Dom.prototype = proto;
+
+	var dom = function (doc) {
+		return new Dom(doc);
+	};
+
+	Object.defineProperties(dom, descriptors);
+	dom.prototype = proto;
 
 	return dom;
 });

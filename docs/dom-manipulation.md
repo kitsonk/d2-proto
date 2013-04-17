@@ -2,11 +2,17 @@
 
 One of the items that I am proposing for Dojo 2 is that the main API for DOM manipulation is CSS selector based.  It is a matter of a fact that for "web" developers, CSS selectors are not optional.  If you are going to style a web page or query the DOM you *have* to know about CSS selectors.  What then happens is that many JavaScript libraries, including Dojo, then force you to remember another API in order to manipulate the DOM.  While CSS selectors can be obscure and obtuse at times, but they are also quite powerful and do get the job done of selecting DOM nodes.
 
-Kris Zyp has developed [put-selector][put], which is a DOM manipulation library based on CSS selectors plus a few other features.  It is a bit of a swiss army knife and combines DOM creation, modification and deletion all in one function call.  While I *really* like put-selector, I do feel that you can end up in a situation where you can get confused if you are creating or manipulating the DOM as well as I feel the remval functionality is somewhat limited.
+Kris Zyp has developed [put-selector][put], which is a DOM manipulation library based on CSS selectors plus a few other features.  It is a bit of a swiss army knife and combines DOM creation, modification and deletion all in one function call.  While I *really* like put-selector, I do feel there are some areas for improvement:
 
-In addition, Dojo has introduced a very simple "CRUD" API for items like `dojo/store` that provide a few simple function calls: `get()`, `put()`, `add()`, `query()` and `remove()`.  This simple, straight forward API, I believe, could also serve as a foundation for a DOM manipulation API.
+* Ability to specify a selector that toggles a class.
+* Attribute strings do not escape properly to support complex values.
+* There is not "shortcut" for specifying the innerText of a node in a selector, which means that you always have to pass a configuration object.  Using the `[content=]` attribute selector could be used to specify this.
+* Variable substitution is only supported in an ordered argument fashion versus a named argument fashion.
+* If the selector creates multiple nodes, only the last node created can be modified with the object attributes.
+* The removal API is limited and slightly confusing.  For example you cannot specify a selector that removes all the direct child nodes of a node.
+* No support for pseudo-classes.  It would be useful to have support for `:first-child` and `:nth-child` as well as `:before` and `:after`.  In addition `:checked` and `:disabled` could be added.
 
-By combining the familiarity of CSS selectors with the simplicity of an effective CRUD based API, I believe there can be a step change in DOM manipulation in Dojo 2.0.
+In addition, put-selector has only focused on the manipulation of the DOM and leaves the querying and retrieval.  There are some parallels between the need to manipulate the DOM as well as perform other CRUD type functions.  Logical separation of the querying, addition and modification API could be very powerful.
 
 ## Examples
 
@@ -18,7 +24,7 @@ require(['d2-proto/dom'], function (dom) {
 });
 ```
 
-Also, I am yet undecided if the return values should be decorated with the DOM manipulation API or not.  I know a lot of developers are fans of chaining, but I am not, because it means, in a lot of cases, spraying syntactic sugar all over the place and modifying objects in ways that could potentially interfere with other libraries.
+Also, I am yet undecided if the return values should be decorated with the DOM manipulation API or not.  I know a lot of developers are fans of chaining, but I am not, because it means, in a lot of cases, spraying syntactic sugar all over the place and modifying objects in ways that could potentially interfere with other libraries, but the more I work with the prototype, the more I think this might be needed.
 
 ### Getting Stuff
 
@@ -34,19 +40,36 @@ var someNodes = dom.query('#someNode >');
 
 ```js
 // Using our previous someNode
-var childNode1 = dom.add(someNode, 'div#childNode1.childClass');
+var childNode1 = dom.put(someNode, 'div#childNode1.childClass');
 // would do something like <div><div id="childNode1" class="childClass"></div></div>
 
 // and
-var childNode2 = dom.add(someNode, '#childNode2.childClass');
+var childNode2 = dom.put(someNode, '#childNode2.childClass');
 // would do something like <div><div id="childNode2" class="childClass"></div></div>
 
 // and
-var childNode3 = dom.add(someNode, '.childClass');
+var childNode3 = dom.put(someNode, '.childClass');
 // would do something like <div><div class="childClass"></div></div>
 ```
 
-This is a difference from put-selector in that `.add()` implies that you are going to be adding nodes no matter what.  This, in my opinion, is one of the confusing things with put selector is that you can think you are adding children nodes, but end up modifying them instead, or the reverse.
+### Removing Stuff
+
+```js
+// Removing using a selector
+dom.remove('#someNode >');
+
+// Removing using a node
+dom.remove(node);
+
+// Removing using a results of a query
+var someNodes = dom.query('#someNode >');
+dom.remove(someNodes);
+
+// Potential chaining, maybe...
+dom.query('#someNode >').remove();
+// Of course, it could be expressed this way as well with only 3 extra characters
+dom.remove(dom.query('#someNode >'));
+```
 
 ## Comparisons
 
@@ -61,6 +84,7 @@ I am going to compare this proposed API against the Dojo 1.x DOM manipulation AP
 | dojo/dom-prop            | domProp  |
 | dojo/dom-style           | domStyle |
 | dojo/query               | query    |
+| dojo/NodeList-dom        | *N/A*    |
 | dojo/NodeList-manipulate | *N/A*    |
 
 Also, in the examples, I will be assuming when giving a Dojo 1.x example in the same block as this proposed API that they are actually separate scope, since they will share the same module variable of `dom`.
@@ -104,32 +128,53 @@ var nodeArray = dom.query('.someClass');
 ### Adding Stuff
 
 ```js
-// Adding a row to a table
+// Adding a row to a table with styles
 
 // In Dojo 1.X
-var row = domConst.create('tr');
+var row = domConst.create('tr', {
+	class: 'someRow'
+});
 domConst.create('td', {
-	innerHTML: 'test'
+	innerHTML: 'test',
+	class: 'special'
 }, row);
 domConst.place(row, query('#aTable tbody')[0]);
 // or
-domConst.place('<tr><td>test</td></td>', query('#aTable tbody')[0]);
+domConst.place('<tr class="someRow"><td class="special">test</td></tr>', query('#aTable tbody')[0]);
 // or
-query('#aTable tbody').place('<tr><td>test</td></td>');
+query('#aTable tbody').place('<tr class="someRow"><td class="special">test</td></tr>');
 
 // In jQuery
 $('#aTable tbody')
-  .append('<tr><td>test</td></td>');
+  .append('<tr class="someRow"><td class="special">test</td></tr>');
 
 // In Proposal
-var tableBody = dom.query('#aTable tbody');
-dom.add(tableBody, 'td tr', {
-	innerHTML: 'test'
-});
+dom.put(dom.query('#aTable tbody'), 'td.someRow tr.special[content=test]');
 // and if chaining were to be added
-dom.query('#aTable tbody').add('td tr', {
-	innerHTML: 'test'
+dom.query('#aTable tbody')
+  .put('td.someRow tr.special[content=test]');
+```
+
+### Modifying Stuff
+
+```js
+//  Adding a class to nodes
+query('p').addClass('myClass', 'yourClass');
+// or
+var nodes = query('p');
+nodes.forEach(function (node) {
+	domClass.add(node, 'myClass', 'yourClass');
 });
+
+// In jQuery
+$('p')
+  .addClass('myClass yourClass');
+
+// In Proposal
+dom.modify(dom.query('p'), '.myClass.yourClass');
+// Or if chaining is added
+dom.query('p')
+  .modify('.myClass.yourClass');
 ```
 
 [put]: https://github.com/kriszyp/put-selector

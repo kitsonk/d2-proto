@@ -290,8 +290,13 @@ define([
 			dom.put(svg, '!');
 			assert.equal(doc.getElementById('svg-test'), null);
 		});
-		test.test('finish', function () {
-			dom.put(body, 'div', { innerText: 'finished tests' });
+		test.test('content attribute', function () {
+			var contentNode = dom.put(doc.body, 'div[content=testing]');
+			assert.equal('testing', contentNode.innerHTML);
+			dom.put(contentNode, '[content=change the text]');
+			assert.equal('change the text', contentNode.innerHTML);
+			dom.put(contentNode, '[!content]');
+			assert.equal('', contentNode.innerHTML);
 		});
 	});
 

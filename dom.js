@@ -166,6 +166,14 @@ define([
 				if (attrName === 'style') {
 					currentNode.style.cssText = attrValue;
 				}
+				if (attrName === 'content' || attrName === '!content') {
+					while (currentNode.firstChild !== null) {
+						currentNode.removeChild(currentNode.firstChild);
+					}
+					if (attrName === 'content') {
+						currentNode.appendChild(doc.createTextNode(attrValue));
+					}
+				}
 				else {
 					method = attrName.charAt(0) === '!' ? (attrName = attrName.substring(1)) && 'removeAttribute'
 						: 'setAttribute';

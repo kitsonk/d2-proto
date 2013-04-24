@@ -1,6 +1,6 @@
 define([
 	'./aspect',
-	'dojo/on',
+	'./on',
 	'./compose'
 ], function (aspect, on, compose) {
 	'use strict';

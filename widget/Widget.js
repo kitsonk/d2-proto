@@ -1,14 +1,13 @@
 define([
-	'dojo/_base/window',
-	'dojo/aspect',
-	'dojo/dom',
-	'dojo/on',
+	'../doc',
+	'../aspect',
+	'../dom',
+	'../on',
 	'../compose',
 	'../lang',
-	'../put',
 	'../Evented',
 	'./registry'
-], function (win, aspect, dom, on, compose, lang, put, Evented, registry) {
+], function (doc, aspect, dom, on, compose, lang, put, Evented, registry) {
 	'use strict';
 
 	var property = compose.property,
@@ -38,7 +37,7 @@ define([
 			}
 		}
 
-		this.sourceNode = dom.byId(sourceNode);
+		this.sourceNode = dom.get(sourceNode);
 
 		if (parameters) {
 			this.parameters = parameters;
@@ -53,7 +52,7 @@ define([
 			}
 		}
 
-		this.ownerDocument = this.ownerDocument || (this.sourceNode ? this.sourceNode.ownerDocument : win.doc);
+		this.ownerDocument = this.ownerDocument || (this.sourceNode ? this.sourceNode.ownerDocument : doc);
 
 		registry.add(this);
 
@@ -162,12 +161,12 @@ define([
 
 		build: function () {
 			if (!this.node) {
-				this.node = this.sourceNode || put('div');
+				this.node = this.sourceNode || dom.put('div');
 			}
 
 			if (this.baseClass) {
 				var classes = '.' + this.baseClass.split(' ').join('.');
-				put(this.node, classes);
+				dom.put(this.node, classes);
 			}
 		},
 
@@ -214,13 +213,13 @@ define([
 					delete this.node.widgetId;
 				}
 				else {
-					put(this.node, '!');
+					dom.put(this.node, '!');
 				}
 			}
 
 			if (this.sourceNode) {
 				if (!preserveDom) {
-					put(this.sourceNode, '!');
+					dom.put(this.sourceNode, '!');
 				}
 				delete this.sourceNode;
 			}
@@ -238,13 +237,13 @@ define([
 			else {
 				var ref = referenceWidget ?
 					(referenceWidget.containerNode && !/after|before|replace/.test(position || '') ?
-						referenceWidget.containerNode : referenceWidget.node) : dom.byId(reference, this.ownerDocument);
+						referenceWidget.containerNode : referenceWidget.node) : dom.get(reference, this.ownerDocument);
 				switch (position) {
 				case 'after':
-					put(ref, '+', this.node);
+					dom.put(ref, '+', this.node);
 					break;
 				case 'before':
-					put(ref, '-', this.node);
+					dom.put(ref, '-', this.node);
 					break;
 				case 'replace':
 					// TODO is there way to do this with put?
@@ -253,7 +252,7 @@ define([
 				// TODO support 'first'
 				// TODO support 'only'
 				default:
-					put(ref, '>', this.node);
+					dom.put(ref, '>', this.node);
 				}
 			}
 		},

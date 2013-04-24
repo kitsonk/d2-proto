@@ -1,14 +1,13 @@
 define([
 	'teststack!tdd',
-	'chai/chai',
-	'dojo/on',
+	'teststack/chai!assert',
+	'../../on',
 	'../../widget/Widget',
 	'../../compose',
 	'../../put',
-], function (test, chai, on, Widget, compose, put) {
+], function (test, assert, on, Widget, compose, put) {
 
-	var assert = chai.assert,
-		after = compose.after;
+	var after = compose.after;
 
 	var TestWidget = compose(Widget, {
 		declaredClass: 'MyWidget',

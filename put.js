@@ -1,5 +1,5 @@
 define([
-	'dojo/has'
+	'./has'
 ], function (has) {
 	'use strict';
 

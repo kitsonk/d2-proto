@@ -247,6 +247,7 @@ define([
 				value: function (selector) {
 					// TODO
 				},
+				enumerable: true
 			},
 			body: {
 				get: function () {

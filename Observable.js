@@ -1,8 +1,8 @@
 define([
 	'./compose',
 	'./properties',
-	'dojo/aspect',
-	'dojo/has'
+	'./aspect',
+	'./has'
 ], function (compose, properties, aspect, has) {
 	'use strict';
 

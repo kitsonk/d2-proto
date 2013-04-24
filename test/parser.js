@@ -3,148 +3,147 @@ define([
 	'teststack!tdd',
 	'teststack/chai!assert',
 	'dojo/_base/declare',
-	'dojo/_base/lang',
-	'dojo/dom',
+	'../lang',
+	'../dom',
 	'dojo/Evented',
 	'dojo/Stateful',
 	'../parser',
-	'../put',
 	'./resources/AMDClass1',
 	'./resources/AMDClass2',
 	'./resources/AMDMixin',
 	'dojo/domReady!'
-], function (require, test, assert, declare, lang, dom, Evented, Stateful, parser, put) {
+], function (require, test, assert, declare, lang, dom, Evented, Stateful, parser) {
 
 	// Create test DOM
 	function createDom(body) {
-		put(body, 'h1', { innerHTML: 'Parser Unit Test' });
+		dom.put(body, 'h1', { innerHTML: 'Parser Unit Test' });
 
 		// Script function used in tests
-		put(body, 'script[type=text/javascript]', {
+		dom.put(body, 'script[type=text/javascript]', {
 			innerHTML: 'function foo(){ this.fooCalled=true; }'
 		});
 
 		// DOM Structure for Basic tests
-		var basic = put(body, 'div#basic');
-		var obj1 = put(basic, 'div#obj1[data-dojo-type=Class1][data-dojo-id=obj1][strProp1=text][strProp2=]' +
+		var basic = dom.put(body, 'div#basic');
+		var obj1 = dom.put(basic, 'div#obj1[data-dojo-type=Class1][data-dojo-id=obj1][strProp1=text][strProp2=]' +
 			'[intProp1=5][arrProp1=foo, bar, baz][arrProp2=][boolProp1=true][boolProp2=false][funcProp2=foo]' +
 			'[funcProp3=this.func3Called=true;]');
 		obj1.setAttribute('strProp2', '');
 		obj1.setAttribute('arrProp2', '');
-		put(obj1, 'script[type=dojo/method]', {
+		dom.put(obj1, 'script[type=dojo/method]', {
 			innerHTML: 'this.deepProp = deepTestProp;'
 		});
-		put(obj1, 'script[type=dojo/before][data-dojo-method=method1][data-dojo-args=result]', {
+		dom.put(obj1, 'script[type=dojo/before][data-dojo-method=method1][data-dojo-args=result]', {
 			innerHTML: '\nif (result) {\n\treturn [ "before" ];\n}\n'
 		});
-		put(obj1, 'script[type=dojo/around][data-dojo-method=method2][data-dojo-args=origFn]', {
+		dom.put(obj1, 'script[type=dojo/around][data-dojo-method=method2][data-dojo-args=origFn]', {
 			innerHTML: '\nreturn function () {\n\tif (!this.method2ran) {\n\t\tthis.method2before = true;\n\t}' +
 				'\n\torigFn.call(this);\n\tif (this.method2ran) {\n\t\tthis.method2after = true;\n\t}\n};\n'
 		});
-		put(obj1, 'script[type=dojo/after][data-dojo-method=method3]', {
+		dom.put(obj1, 'script[type=dojo/after][data-dojo-method=method3]', {
 			innerHTML: '\nif (this.method3ran) {\n\tthis.method3after = true;\n}\n'
 		});
-		put(basic, 'div#obj2[data-dojo-type=Class1][data-dojo-id=obj2]')
+		dom.put(basic, 'div#obj2[data-dojo-type=Class1][data-dojo-id=obj2]')
 			.setAttribute('data-dojo-props', 'strProp1:"text", strProp2:"", intProp1:5, arrProp1:["foo", "bar", "baz"],' +
 				'arrProp2:[], boolProp1:true, boolProp2:false, funcProp2:foo, funcProp3:"this.func3Called=true;"');
-		var checkedObj = put(basic, 'input[data-dojo-type=InputClass][data-dojo-id=checkedObj][type=checkbox]');
+		var checkedObj = dom.put(basic, 'input[data-dojo-type=InputClass][data-dojo-id=checkedObj][type=checkbox]');
 		checkedObj.setAttribute('checked', '');
-		var disabledObj = put(basic, 'button[data-dojo-type=InputClass][data-dojo-id=disabledObj]', {
+		var disabledObj = dom.put(basic, 'button[data-dojo-type=InputClass][data-dojo-id=disabledObj]', {
 			innerHTML: 'hi'
 		});
 		disabledObj.setAttribute('disabled', '');
-		put(basic, 'input[data-dojo-type=InputClass][data-dojo-id=mixedObj][title=native title][value=mixedValue]')
+		dom.put(basic, 'input[data-dojo-type=InputClass][data-dojo-id=mixedObj][title=native title][value=mixedValue]')
 			.setAttribute('data-dojo-props', 'custom1: 999, title: "custom title"');
-		var container1 = put(basic, 'div div#container1[data-dojo-type=NormalContainer][data-dojo-id=container1]');
-		put(container1, 'div[data-dojo-type=Class1][data-dojo-id=contained1]');
-		put(container1, 'div div[data-dojo-type=Class1][data-dojo-id=contained2]');
-		var container2 = put(basic, 'div div#container2[data-dojo-type=ShieldedContainer][data-dojo-id=container2]');
-		put(container2, 'div[data-dojo-type=Class1][data-dojo-id=contained3]');
-		put(container2, 'div div[data-dojo-type=Class1][data-dojo-id=contained4]');
+		var container1 = dom.put(basic, 'div div#container1[data-dojo-type=NormalContainer][data-dojo-id=container1]');
+		dom.put(container1, 'div[data-dojo-type=Class1][data-dojo-id=contained1]');
+		dom.put(container1, 'div div[data-dojo-type=Class1][data-dojo-id=contained2]');
+		var container2 = dom.put(basic, 'div div#container2[data-dojo-type=ShieldedContainer][data-dojo-id=container2]');
+		dom.put(container2, 'div[data-dojo-type=Class1][data-dojo-id=contained3]');
+		dom.put(container2, 'div div[data-dojo-type=Class1][data-dojo-id=contained4]');
 
 		// Parsing a sub-node
-		put(body, 'div #toParse[data-dojo-type=Class1][data-dojo-id=obj3]');
+		dom.put(body, 'div #toParse[data-dojo-type=Class1][data-dojo-id=obj3]');
 
 		// DOM for stateful declarative scripts
-		var stateful = put(body, 'div#stateful [data-dojo-type=StatefulClass][data-dojo-id=stateful1]');
-		put(stateful, 'script[type=dojo/watch][data-dojo-prop=strProp1][data-dojo-args=prop,oldValue,newValue]', {
+		var stateful = dom.put(body, 'div#stateful [data-dojo-type=StatefulClass][data-dojo-id=stateful1]');
+		dom.put(stateful, 'script[type=dojo/watch][data-dojo-prop=strProp1][data-dojo-args=prop,oldValue,newValue]', {
 			innerHTML: 'this.set("objProp1", { prop: prop, oldValue: oldValue, newValue: newValue });'
 		});
-		put(stateful, 'script[type=dojo/on][data-dojo-event=click][data-dojo-args=e]', {
+		dom.put(stateful, 'script[type=dojo/on][data-dojo-event=click][data-dojo-args=e]', {
 			innerHTML: 'this.set("boolProp1", true);'
 		});
 
 		// DOM for adaptor classes
-		var adaptor = put(body, 'div#adaptor');
-		put(adaptor, 'div[data-dojo-type=AdaptorClass][data-dojo-id=adaptor1][bar=qat]')
+		var adaptor = dom.put(body, 'div#adaptor');
+		dom.put(adaptor, 'div[data-dojo-type=AdaptorClass][data-dojo-id=adaptor1][bar=qat]')
 			.setAttribute('data-dojo-props', 'foo:"bar"');
 
 		// DOM for startup tests
-		put(body, 'div#start div[data-dojo-type=StartupClass][data-dojo-id=startup1]');
-		put(body, 'div#nostart div[data-dojo-type=StartupClass][data-dojo-id=startup2]');
-		var container3 = put(body, 'div#template div[data-dojo-type=ShieldedContainer][data-dojo-id=container3]');
-		put(container3, 'div[data-dojo-type=Class1][data-dojo-id=contained5]');
-		put(container3, 'div div[data-dojo-type=Class1][data-dojo-id=contained6]');
+		dom.put(body, 'div#start div[data-dojo-type=StartupClass][data-dojo-id=startup1]');
+		dom.put(body, 'div#nostart div[data-dojo-type=StartupClass][data-dojo-id=startup2]');
+		var container3 = dom.put(body, 'div#template div[data-dojo-type=ShieldedContainer][data-dojo-id=container3]');
+		dom.put(container3, 'div[data-dojo-type=Class1][data-dojo-id=contained5]');
+		dom.put(container3, 'div div[data-dojo-type=Class1][data-dojo-id=contained6]');
 
 		// DOM for parser mixin tests
-		put(body, 'div div#mixin div[data-dojo-type=Class1][data-dojo-id=mixin1]')
+		dom.put(body, 'div div#mixin div[data-dojo-type=Class1][data-dojo-id=mixin1]')
 			.setAttribute('data-dojo-props', 'strProp1: "foo"');
 
 		// DOM for propThis
-		put(body, 'div#propThis div[data-dojo-type=Class1][data-dojo-id=propthis1]')
+		dom.put(body, 'div#propThis div[data-dojo-type=Class1][data-dojo-id=propthis1]')
 			.setAttribute('data-dojo-props', 'strProp1: this.baz, strProp2: this.bar');
 
 		// DOM for AMD MID tests
-		var amd = put(body, 'div#amd');
-		put(amd, 'div[data-dojo-type=d2-proto/test/resources/AMDClass1][data-dojo-id=amd1]')
+		var amd = dom.put(body, 'div#amd');
+		dom.put(amd, 'div[data-dojo-type=d2-proto/test/resources/AMDClass1][data-dojo-id=amd1]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
-		put(amd, 'div[data-dojo-type=./test/resources/AMDClass2][data-dojo-id=amd2]')
+		dom.put(amd, 'div[data-dojo-type=./test/resources/AMDClass2][data-dojo-id=amd2]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
-		put(amd, 'div[data-dojo-type=d2-proto/test/resources/AMDClass3][data-dojo-id=amd3]')
+		dom.put(amd, 'div[data-dojo-type=d2-proto/test/resources/AMDClass3][data-dojo-id=amd3]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
-		put(amd, 'div[data-dojo-type=./test/resources/AMDClass4][data-dojo-id=amd4]')
+		dom.put(amd, 'div[data-dojo-type=./test/resources/AMDClass4][data-dojo-id=amd4]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
 
 		// DOM for contextual require tests
-		var contextRequire = put(body, 'div#contextRequire');
-		put(contextRequire, 'div[data-dojo-type=./resources/AMDClass1][data-dojo-id=context1]')
+		var contextRequire = dom.put(body, 'div#contextRequire');
+		dom.put(contextRequire, 'div[data-dojo-type=./resources/AMDClass1][data-dojo-id=context1]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
-		put(contextRequire, 'div[data-dojo-type=./resources/AMDClass5][data-dojo-id=context2]')
+		dom.put(contextRequire, 'div[data-dojo-type=./resources/AMDClass5][data-dojo-id=context2]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
 
 		// DOM for declarative require tests
-		var declarativeRequire = put(body, 'div#declarativeRequire');
-		put(declarativeRequire, 'script[type=dojo/require]', {
+		var declarativeRequire = dom.put(body, 'div#declarativeRequire');
+		dom.put(declarativeRequire, 'script[type=dojo/require]', {
 			innerHTML: '\nAMDClass1: "d2-proto/test/resources/AMDClass1",\nAMDClass2: "./test/resources/AMDClass2",\n'
 				+ '"classes.AMDClass3": "d2-proto/test/resources/AMDClass3"\n'
 		});
-		put(declarativeRequire, 'div[data-dojo-type=AMDClass1][data-dojo-id=declarative1]')
+		dom.put(declarativeRequire, 'div[data-dojo-type=AMDClass1][data-dojo-id=declarative1]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
-		put(declarativeRequire, 'div[data-dojo-type=AMDClass2][data-dojo-id=declarative2]')
+		dom.put(declarativeRequire, 'div[data-dojo-type=AMDClass2][data-dojo-id=declarative2]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
-		put(declarativeRequire, 'div[data-dojo-type=classes.AMDClass3][data-dojo-id=declarative3]')
+		dom.put(declarativeRequire, 'div[data-dojo-type=classes.AMDClass3][data-dojo-id=declarative3]')
 			.setAttribute('data-dojo-props', 'strProp1: "text"');
 
 		// DOM for data-dojo-mixins tests
-		var declarativeMixins = put(body, 'div#declarativeMixins');
-		put(declarativeMixins, 'div[data-dojo-type=Class1][data-dojo-id=resultMixin1][data-dojo-mixins=Mixin1,Mixin2,./test/resources/AMDMixin]');
-		put(declarativeMixins, 'div[data-dojo-type=ClassForMixins][data-dojo-id=resultMixin2][data-dojo-mixins=Mixin1, Mixin2, ./test/resources/AMDMixin]');
-		put(declarativeMixins, 'div[data-dojo-type=MyNonDojoClass][data-dojo-id=resultMixin3][data-dojo-mixins=Mixin1,Mixin2]');
+		var declarativeMixins = dom.put(body, 'div#declarativeMixins');
+		dom.put(declarativeMixins, 'div[data-dojo-type=Class1][data-dojo-id=resultMixin1][data-dojo-mixins=Mixin1,Mixin2,./test/resources/AMDMixin]');
+		dom.put(declarativeMixins, 'div[data-dojo-type=ClassForMixins][data-dojo-id=resultMixin2][data-dojo-mixins=Mixin1, Mixin2, ./test/resources/AMDMixin]');
+		dom.put(declarativeMixins, 'div[data-dojo-type=MyNonDojoClass][data-dojo-id=resultMixin3][data-dojo-mixins=Mixin1,Mixin2]');
 
 		// DOM for data-type tests
-		var dataType = put(body, 'div#dataType');
-		put(dataType, 'div[data-type=Class1][data-id=type1]').setAttribute('data-props', 'strProp1: "other"');
-		put(dataType, 'div[data-dojo-type=Class1][data-dojo-id=type2]');
+		var dataType = dom.put(body, 'div#dataType');
+		dom.put(dataType, 'div[data-type=Class1][data-id=type1]').setAttribute('data-props', 'strProp1: "other"');
+		dom.put(dataType, 'div[data-dojo-type=Class1][data-dojo-id=type2]');
 
 		// DOM for custom selector
-		var customSelector = put(body, 'div#customSelector');
-		put(customSelector, 'div[data-type=Class1][data-id=type3]');
-		put(customSelector, 'div[data-type=Class1][data-custom][data-id=type4]');
+		var customSelector = dom.put(body, 'div#customSelector');
+		dom.put(customSelector, 'div[data-type=Class1][data-id=type3]');
+		dom.put(customSelector, 'div[data-type=Class1][data-custom][data-id=type4]');
 
 		// DOM for parser error handling tests
-		put(body, 'div#throwerror1 div[data-dojo-type=NonExistentClass][data-dojo-id=noclass1]');
-		put(body, 'div#throwerror2 div[data-dojo-type=some/bad/MID][data-dojo-id=noclass2]');
-		put(body, 'div#throwerror3 div[data-dojo-type=ThrowErrorClass][data-dojo-id=noclass3]');
+		dom.put(body, 'div#throwerror1 div[data-dojo-type=NonExistentClass][data-dojo-id=noclass1]');
+		dom.put(body, 'div#throwerror2 div[data-dojo-type=some/bad/MID][data-dojo-id=noclass2]');
+		dom.put(body, 'div#throwerror3 div[data-dojo-type=ThrowErrorClass][data-dojo-id=noclass3]');
 	}
 
 	createDom(document.body);
@@ -290,7 +289,7 @@ define([
 
 	test.suite('parser basic tests', function () {
 		test.test('parse()', function () {
-			return parser.parse(dom.byId('basic'));
+			return parser.parse(dom.get('basic'));
 		});
 		test.test('data-dojo-id', function () {
 			assert.equal('object', typeof obj1);
@@ -413,7 +412,7 @@ define([
 		});
 		test.test('parse sub-node', function () {
 			assert.isFalse(lang.exists('obj3'), 'obj3 does not exist');
-			return parser.parse(dom.byId('toParse').parentNode).then(function () {
+			return parser.parse(dom.get('toParse').parentNode).then(function () {
 				assert(obj3);
 				assert(obj3 instanceof Class1);
 			});

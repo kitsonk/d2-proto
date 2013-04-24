@@ -4,10 +4,10 @@ define([
 	'./lang', // lang.getObject, lang.setObject, lang.mixin, lang.hitch
 	'./aspect', // aspect.before, aspect.around, aspect.after
 	'dojo/Deferred', // Deferred
-	'./dom', // dom.byId
-	'dojo/on', // on
+	'./dom', // dom.get
+	'./on', // on
 	'dojo/promise/all', // all
-	'dojo/when', // when
+	'dojo/when' // when
 ], function (require, debug, lang, aspect, Deferred, dom, on, all, when) {
 
 	var scopeBase = 'dojo',
@@ -516,7 +516,7 @@ define([
 			mixinsAttribute = options.mixinsAttribute || mixinsAttribute;
 
 			if (typeof rootNode === 'string') {
-				rootNode = dom.byId(rootNode);
+				rootNode = dom.get(rootNode);
 			}
 
 			// an array that may contain declarative require promises

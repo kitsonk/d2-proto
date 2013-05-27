@@ -1,5 +1,5 @@
 define([
-	'teststack!bench',
+	'intern!bench',
 	'../../parser',
 	'../../put',
 	'd2-proto/test/resources/AMDClass1',

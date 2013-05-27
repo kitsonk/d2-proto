@@ -1,10 +1,8 @@
 define([
-	'teststack!tdd',
-	'chai/chai',
+	'intern!tdd',
+	'intern/chai!assert',
 	'../properties'
-], function (test, chai, properties) {
-
-	var assert = chai.assert;
+], function (test, assert, properties) {
 
 	test.suite('getDescriptor', function () {
 		var descriptor = {

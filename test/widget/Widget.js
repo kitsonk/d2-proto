@@ -1,6 +1,6 @@
 define([
-	'teststack!tdd',
-	'teststack/chai!assert',
+	'intern!tdd',
+	'intern/chai!assert',
 	'../../on',
 	'../../widget/Widget',
 	'../../compose',

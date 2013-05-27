@@ -3,6 +3,9 @@ define([
 	'./lang',
 	'./Observable',
 	'./properties',
-	'dojo/has!host-browser?./put',
-	'dojo/has!host-browser?./widget/Widget'
+	'./dom',
+	'../has!host-browser?./put',
+	'../has!host-browser?./parser',
+	'../has!host-browser?./parser/benchmark'
+	// 'dojo/has!host-browser?./widget/Widget'
 ], 1);

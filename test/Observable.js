@@ -1,11 +1,8 @@
 define([
-	'teststack!tdd',
-	'chai/chai',
-	'../Observable',
-	'../compose'
-], function (test, chai, Observable, compose) {
-
-	var assert = chai.assert;
+	'intern!tdd',
+	'intern/chai!assert',
+	'../Observable'
+], function (test, assert, Observable) {
 
 	test.suite('basic functionality', function () {
 		test.test('observe', function () {

@@ -1,6 +1,6 @@
 define([
-	'teststack!tdd',
-	'teststack/chai!assert',
+	'intern!tdd',
+	'intern/chai!assert',
 	'../put'
 ], function (test, assert, put) {
 

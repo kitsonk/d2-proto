@@ -1,10 +1,8 @@
 define([
-	'teststack!tdd',
-	'chai/chai',
+	'intern!tdd',
+	'intern/chai!assert',
 	'../lang'
-], function (test, chai, lang) {
-
-	var assert = chai.assert;
+], function (test, assert, lang) {
 
 	test.suite('mixin', function () {
 		test.test('basic', function () {

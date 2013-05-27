@@ -1,10 +1,8 @@
 define([
-	'teststack!tdd',
-	'chai/chai',
+	'intern!tdd',
+	'intern/chai!assert',
 	'../compose'
-], function (test, chai, compose) {
-
-	var assert = chai.assert;
+], function (test, assert, compose) {
 
 	var required = compose.required,
 		before = compose.before,

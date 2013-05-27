@@ -1,7 +1,7 @@
 define([
 	'require',
-	'teststack!tdd',
-	'teststack/chai!assert',
+	'intern!tdd',
+	'intern/chai!assert',
 	'dojo/_base/declare',
 	'../lang',
 	'../dom',
@@ -146,148 +146,149 @@ define([
 		dom.put(body, 'div#throwerror3 div[data-dojo-type=ThrowErrorClass][data-dojo-id=noclass3]');
 	}
 
-	createDom(document.body);
-
-	lang.setObject('MyNonDojoClass', function () {});
-
-	MyNonDojoClass.extend = function () {
-		var args = arguments;
-		return function () {
-			this.expectedClass = true;
-			this.params = args;
-		};
-	};
-
-	// Necessary to declare in the global scope, because the parser evaluates everything in the global scope
-	lang.setObject('Class1', declare(null, {
-		constructor: function (args/*, node*/) {
-			this.params = args;
-			lang.mixin(this, args);
-		},
-		preambleTestProp: 1,
-		preamble: function () {
-			this.preambleTestProp++;
-		},
-		intProp1: 1,
-		callCount1: 0, // for connect testing
-		callInc: function () { this.callCount1++; },
-		callCount2: 0, // for assignment testing
-		strProp1: 'original1',
-		strProp2: 'original2',
-		arrProp1: [],
-		arrProp2: ['foo'],
-		boolProp1: false,
-		boolProp2: true,
-		boolProp3: false,
-		boolProp4: true,
-		funcProp1: function () {},
-		funcProp2: function () {},
-		funcProp3: function () {},
-		method1: function (value) {
-			this.method1ran = value;
-		},
-		method2: function () {
-			this.method2ran = true;
-		},
-		method3: function () {
-			this.method3ran = true;
-		},
-		onclick: function () { this.prototypeOnclick = true; }
-	}));
-
-	lang.setObject('InputClass', declare(null, {
-		constructor: function (args/*, node*/) {
-			this.params = args;
-			lang.mixin(this, args);
-		},
-
-		// these attributes are special in HTML and may not specify a value
-		disabled: false,
-		readonly: false,
-		checked: false,
-
-		// other attributes native to HTML
-		value: 'default value',
-		title: 'default title',
-		tabIndex: '0', // special because mixed case
-
-		// custom widget attributes
-		custom1: 123,
-		custom2: 456
-	}));
-
-	lang.setObject('StatefulClass', declare([Evented, Stateful], {
-		strProp1: '',
-		objProp1: {},
-		boolProp1: false,
-		prototypeOnclick: false,
-		onclick: function () {
-			this.prototypeOnclick = true;
-		}
-	}));
-
-	lang.setObject('NormalContainer', declare(null, {
-		constructor: function (args/*, node*/) {
-			lang.mixin(this, args);
-		}
-	}));
-
-	lang.setObject('ShieldedContainer', declare(null, {
-		constructor: function (args/*, node*/) {
-			lang.mixin(this, args);
-		},
-		stopParser: true
-	}));
-
-	lang.setObject('AdaptorClass', declare(null, {
-		constructor: function () {
-			this.fromAdaptor = false;
-		},
-		fromAdaptor: false,
-		adaptor: function (args, node, Ctor) {
-			var i = new Ctor();
-			i.fromAdaptor = true;
-			i.params = args;
-			i.bar = node.getAttribute('bar');
-			return i;
-		}
-	}));
-
-	lang.setObject('StartupClass', declare(null, {
-		constructor: function (args/*, node*/) {
-			lang.mixin(this, args);
-		},
-		started: false,
-		startup: function () {
-			this.started = true;
-		}
-	}));
-
-	lang.setObject('ClassForMixins', declare(null, {
-		classDone: true
-	}));
-
-	lang.setObject('Mixin1', declare(null, {
-		mixin1Done: true
-	}));
-
-	lang.setObject('Mixin2', declare(null, {
-		mixin2Done: true
-	}));
-
-	lang.setObject('ThrowErrorClass', declare(null, {
-		constructor: function (/*args, node*/) {
-			throw new Error('Error on construction!');
-		}
-	}));
-
-	lang.setObject('deepTestProp', {
-		blah: {
-			thinger: 1
-		}
-	});
-
 	test.suite('parser basic tests', function () {
+		lang.setObject('MyNonDojoClass', function () {});
+
+		MyNonDojoClass.extend = function () {
+			var args = arguments;
+			return function () {
+				this.expectedClass = true;
+				this.params = args;
+			};
+		};
+
+		// Necessary to declare in the global scope, because the parser evaluates everything in the global scope
+		lang.setObject('Class1', declare(null, {
+			constructor: function (args/*, node*/) {
+				this.params = args;
+				lang.mixin(this, args);
+			},
+			preambleTestProp: 1,
+			preamble: function () {
+				this.preambleTestProp++;
+			},
+			intProp1: 1,
+			callCount1: 0, // for connect testing
+			callInc: function () { this.callCount1++; },
+			callCount2: 0, // for assignment testing
+			strProp1: 'original1',
+			strProp2: 'original2',
+			arrProp1: [],
+			arrProp2: ['foo'],
+			boolProp1: false,
+			boolProp2: true,
+			boolProp3: false,
+			boolProp4: true,
+			funcProp1: function () {},
+			funcProp2: function () {},
+			funcProp3: function () {},
+			method1: function (value) {
+				this.method1ran = value;
+			},
+			method2: function () {
+				this.method2ran = true;
+			},
+			method3: function () {
+				this.method3ran = true;
+			},
+			onclick: function () { this.prototypeOnclick = true; }
+		}));
+
+		lang.setObject('InputClass', declare(null, {
+			constructor: function (args/*, node*/) {
+				this.params = args;
+				lang.mixin(this, args);
+			},
+
+			// these attributes are special in HTML and may not specify a value
+			disabled: false,
+			readonly: false,
+			checked: false,
+
+			// other attributes native to HTML
+			value: 'default value',
+			title: 'default title',
+			tabIndex: '0', // special because mixed case
+
+			// custom widget attributes
+			custom1: 123,
+			custom2: 456
+		}));
+
+		lang.setObject('StatefulClass', declare([Evented, Stateful], {
+			strProp1: '',
+			objProp1: {},
+			boolProp1: false,
+			prototypeOnclick: false,
+			onclick: function () {
+				this.prototypeOnclick = true;
+			}
+		}));
+
+		lang.setObject('NormalContainer', declare(null, {
+			constructor: function (args/*, node*/) {
+				lang.mixin(this, args);
+			}
+		}));
+
+		lang.setObject('ShieldedContainer', declare(null, {
+			constructor: function (args/*, node*/) {
+				lang.mixin(this, args);
+			},
+			stopParser: true
+		}));
+
+		lang.setObject('AdaptorClass', declare(null, {
+			constructor: function () {
+				this.fromAdaptor = false;
+			},
+			fromAdaptor: false,
+			adaptor: function (args, node, Ctor) {
+				var i = new Ctor();
+				i.fromAdaptor = true;
+				i.params = args;
+				i.bar = node.getAttribute('bar');
+				return i;
+			}
+		}));
+
+		lang.setObject('StartupClass', declare(null, {
+			constructor: function (args/*, node*/) {
+				lang.mixin(this, args);
+			},
+			started: false,
+			startup: function () {
+				this.started = true;
+			}
+		}));
+
+		lang.setObject('ClassForMixins', declare(null, {
+			classDone: true
+		}));
+
+		lang.setObject('Mixin1', declare(null, {
+			mixin1Done: true
+		}));
+
+		lang.setObject('Mixin2', declare(null, {
+			mixin2Done: true
+		}));
+
+		lang.setObject('ThrowErrorClass', declare(null, {
+			constructor: function (/*args, node*/) {
+				throw new Error('Error on construction!');
+			}
+		}));
+
+		lang.setObject('deepTestProp', {
+			blah: {
+				thinger: 1
+			}
+		});
+
+		test.test('setup', function () {
+			createDom(document.body);
+		});
 		test.test('parse()', function () {
 			return parser.parse(dom.get('basic'));
 		});

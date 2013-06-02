@@ -14,6 +14,7 @@ define({
 		{ browserName: 'safari', version: '6', platform: 'Mac 10.8' }
 	],
 
+	maxConcurrency: 3,
 	useSauceConnect: true,
 
 	webdriver: {
@@ -24,14 +25,13 @@ define({
 	loader: {
 		packages: [
 			{ name: 'dojo', location: 'dojo' },
-			{ name: 'd2-proto', location: 'd2-proto' },
-			{ name: 'dojo2-core', location: 'dojo2-core' }
+			{ name: 'd2-proto', location: 'd2-proto' }
 		]
 	},
 
 	suites: [ 'd2-proto/test/all' ],
 
-	functionalSuites: [ 'd2-proto/test/all' ],
+	functionalSuites: [ 'd2-proto/test/functional' ],
 
 	excludeInstrumentation: /^d2-proto\/(?:test\/)/
 

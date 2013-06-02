@@ -53,7 +53,7 @@ define([
 			// summary:
 			//		Removes a property, including in its inheritance chain.
 			// description:
-			//		Ascends the prototype of the object deleting any occurances of the name property.  This is useful when
+			//		Ascends the prototype of the object deleting any occurrences of the name property.  This is useful when
 			//		wanting to ensure that if a configurable property is defined somewhere in the inheritance chain, it
 			//		does not get persisted when using the object as a prototype for another object.
 			// obj: Object

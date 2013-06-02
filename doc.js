@@ -34,6 +34,8 @@ define([
 
 		var property = compose.property;
 
+		var body;
+
 		var Element = compose(function (tag) {
 			this.tag = tag;
 		}, {
@@ -251,8 +253,10 @@ define([
 			},
 			body: {
 				get: function () {
-					// TODO
-					return null;
+					if (!body) {
+						body = new Element('body');
+					}
+					return body;
 				},
 				enumerable: true
 			},

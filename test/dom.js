@@ -174,74 +174,74 @@ define([
 		});
 	});
 
-	test.suite('dom.put()', function () {
+	test.suite('dom.add()', function () {
 		var div;
 		test.test('basic', function () {
 			emptyDom();
-			div = dom.put('div');
+			div = dom.add('div');
 			assert.equal(div.tagName.toLowerCase(), 'div', 'basic selector works');
-			assert.strictEqual(dom.put(div), div, 'passed nodes handled correctly');
+			assert.strictEqual(dom.add(div), div, 'passed nodes handled correctly');
 		});
 		var body = doc.body;
 		test.test('add test header', function () {
-			dom.put(body, 'h1 $', 'Running dom.put() tests');
+			dom.add(body, 'h1 $', 'Running dom.add() tests');
 		});
 		var parentDiv,
 			span0, span1, span2, span3, span4, spanMinusTwo, spanWithId;
 		test.test('class selectors', function () {
 			parentDiv = div;
-			span1 = dom.put(parentDiv, 'span.class-name-1.class-name-2[name=span1]');
+			span1 = dom.add(parentDiv, 'span.class-name-1.class-name-2[name=span1]');
 			assert.equal(span1.className, 'class-name-1 class-name-2', 'span1.className');
 			assert.equal(span1.getAttribute('name'), 'span1');
 			assert.equal(span1.parentNode, div);
 
-			dom.put(span1, '!class-name-1.class-name-3[!name]');
+			dom.add(span1, '!class-name-1.class-name-3[!name]');
 			assert.equal(span1.className, 'class-name-2 class-name-3');
 
-			dom.put(span1, '!.class-name-3');
+			dom.add(span1, '!.class-name-3');
 			assert.equal(span1.className, 'class-name-2');
 			assert.equal(span1.getAttribute('name'), null);
-			dom.put(span1, '[name=span1]'); // re-add the attribute
+			dom.add(span1, '[name=span1]'); // re-add the attribute
 		});
 		var defaultTag;
 		test.test('element placement', function () {
-			defaultTag = dom.put(parentDiv, ' .class');
+			defaultTag = dom.add(parentDiv, ' .class');
 			assert.equal(defaultTag.tagName.toLowerCase(), 'div');
-			span3 = dom.put(span1, '+span[name=span2] + span[name=span3]');
+			span3 = dom.add(span1, '+span[name=span2] + span[name=span3]');
 			assert.equal(span3.getAttribute('name'), 'span3');
 			assert.equal((span2 = span3.previousSibling).getAttribute('name'), 'span2');
 			assert.equal(span3.previousSibling.previousSibling.getAttribute('name'), 'span1');
-			span4 = dom.put(span2, '>', span3, 'span.$[name=$]', 'span3-child', 'span4');
+			span4 = dom.add(span2, '>', span3, 'span.$[name=$]', 'span3-child', 'span4');
 			assert.equal(span3.parentNode, span2);
 			assert.equal(span4.parentNode, span3);
 			assert.equal(span4.className, 'span3-child');
 			assert.equal(span4.getAttribute('name'), 'span4');
-			dom.put(span2, '+', span3, '+', span4);
+			dom.add(span2, '+', span3, '+', span4);
 			assert.equal(span2.nextSibling, span3);
 			assert.equal(span3.nextSibling, span4);
 		});
 		test.test('setting innerHTML', function () {
-			parentDiv = dom.put('div.parent span.first $ + span.second $<', 'inside first', 'inside second');
+			parentDiv = dom.add('div.parent span.first $ + span.second $<', 'inside first', 'inside second');
 			assert.equal(parentDiv.firstChild.innerHTML, 'inside first');
 			assert.equal(parentDiv.lastChild.innerHTML, 'inside second');
 		});
 		test.test('destroy', function () {
-			dom.put(span3, '!');
+			dom.add(span3, '!');
 			assert.notEqual(span2.nextSibling, span3);
 		});
 		test.test('before', function () {
-			span0 = dom.put(span1, '-span[name=span0]');
+			span0 = dom.add(span1, '-span[name=span0]');
 			assert.equal(span0.getAttribute('name'), 'span0');
-			spanMinusTwo = dom.put(span0, '-span -span');
+			spanMinusTwo = dom.add(span0, '-span -span');
 			assert.equal(spanMinusTwo.nextSibling.nextSibling, span0);
 		});
 		test.test('with id', function () {
-			spanWithId = dom.put(parentDiv, 'span#with-id');
+			spanWithId = dom.add(parentDiv, 'span#with-id');
 			assert.equal(spanWithId.id, 'with-id');
 		});
 		var table;
 		test.test('table', function () {
-			table = dom.put(parentDiv, 'table.class-name#id tr.class-name td[colSpan=2]<<tr.class-name td+td<<');
+			table = dom.add(parentDiv, 'table.class-name#id tr.class-name td[colSpan=2]<<tr.class-name td+td<<');
 			assert.equal(table.tagName.toLowerCase(), 'table');
 			assert.equal(table.childNodes.length, 2);
 			assert.equal(table.firstChild.className, 'class-name');
@@ -250,35 +250,35 @@ define([
 			assert.equal(table.lastChild.childNodes.length, 2);
 		});
 		test.test('table rows', function () {
-			dom.put(table, 'tr>td,tr>td+td');
+			dom.add(table, 'tr>td,tr>td+td');
 			assert.equal(table.childNodes.length, 4);
 			assert.equal(table.lastChild.childNodes.length, 2);
 		});
 		var checkbox;
 		test.test('inputs', function () {
-			checkbox = dom.put(div, 'input[type=checkbox][checked]');
+			checkbox = dom.add(div, 'input[type=checkbox][checked]');
 			assert.equal(checkbox.type, 'checkbox');
 			assert.equal(checkbox.getAttribute('checked'), 'checked');
 		});
 		var arrayFrag;
 		test.test('array of fragments', function () {
-			div = dom.put('div');
-			arrayFrag = dom.put(div, ['span.c1', 'span.c2', 'span.c3']);
+			div = dom.add('div');
+			arrayFrag = dom.add(div, ['span.c1', 'span.c2', 'span.c3']);
 			assert.equal(arrayFrag.tagName.toLowerCase(), 'div');
 			assert.equal(div.firstChild.className, 'c1');
 			assert.equal(div.lastChild.className, 'c3');
 		});
 		test.test('encoded id', function () {
-			dom.put(div, '#encode%3A%20d');
+			dom.add(div, '#encode%3A%20d');
 			assert.equal(div.id, 'encode%3A%20d');
 		});
 		test.test('styles', function () {
-			var styled = dom.put('div.someClass[style=color:green;margin-left:10px]');
+			var styled = dom.add('div.someClass[style=color:green;margin-left:10px]');
 			assert.equal(styled.style.marginLeft.slice(0, 2), '10');
 		});
 		test.test('add namespace', function () {
 			dom.addNamespace('put', 'http://github.com/kriszyp/dgrid');
-			var namespaced = dom.put('put|foo[bar=test1][put|bar=test2]');
+			var namespaced = dom.add('put|foo[bar=test1][put|bar=test2]');
 			assert.equal((namespaced.namespaceURI || namespaced.tagUrn), 'http://github.com/kriszyp/dgrid');
 			assert.equal(namespaced.tagName, 'foo');
 			assert.equal(namespaced.getAttribute('bar'), 'test1');
@@ -286,16 +286,16 @@ define([
 		});
 		test.test('svg', function () {
 			dom.addNamespace('svg', 'http://www.w3.org/2000/svg');
-			var svg = dom.put(doc.body, 'svg|svg#svg-test');
-			dom.put(svg, '!');
+			var svg = dom.add(doc.body, 'svg|svg#svg-test');
+			dom.add(svg, '!');
 			assert.equal(doc.getElementById('svg-test'), null);
 		});
 		test.test('content attribute', function () {
-			var contentNode = dom.put(doc.body, 'div[content=testing]');
+			var contentNode = dom.add(doc.body, 'div[content=testing]');
 			assert.equal('testing', contentNode.innerHTML);
-			dom.put(contentNode, '[content=change the text]');
+			dom.add(contentNode, '[content=change the text]');
 			assert.equal('change the text', contentNode.innerHTML);
-			dom.put(contentNode, '[!content]');
+			dom.add(contentNode, '[!content]');
 			assert.equal('', contentNode.innerHTML);
 		});
 	});
@@ -507,6 +507,9 @@ define([
 			assert.equal(6, dom.query('#t span:empty').length);
 			assert.equal(0, dom.query('h3 span:empty').length);
 			assert.equal(1, dom.query('h3 :not(:empty)').length);
+		});
+		test.test('decoration function', function () {
+			console.log(dom.query('.foo~span'));
 		});
 	});
 

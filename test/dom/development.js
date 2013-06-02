@@ -1,6 +1,6 @@
 define([
-	'teststack!tdd',
-	'teststack/chai!assert',
+	'intern!tdd',
+	'intern/chai!assert',
 	'../../dom'
 ], function (test, assert, dom) {
 	// function domElementMatches() {
@@ -14,7 +14,7 @@ define([
 	// }
 
 	function putDom() {
-		dom.put(document.body, 'div#test1[data-dojo-type=test] div#test2[data-dojo-type=test]');
+		dom.add(document.body, 'div#test1[data-dojo-type=test] div#test2[data-dojo-type=test]');
 	}
 
 	test.suite('querying the DOM', function () {

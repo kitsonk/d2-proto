@@ -1,5 +1,5 @@
 define([
-	'teststack!bench',
+	'intern!bench',
 	'../../put'
 ], function (bench, put) {
 

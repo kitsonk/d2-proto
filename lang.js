@@ -84,7 +84,7 @@ define([
 		// summary:
 		//		This module defines Javascript language extensions.
 
-		mixin: function (dest /*, sources*/) {
+		mixin: function (dest /*, sources...*/) {
 			// summary:
 			//		Copies/adds all properties of one or more sources to dest; returns dest.
 			// dest: Object
@@ -121,7 +121,9 @@ define([
 			//	|	// will print "true"
 			//	|	console.log(flattened.braces);
 
-			if (!dest) { dest = {}; }
+			if (!dest) {
+				dest = {};
+			}
 			for (var i = 1, l = arguments.length; i < l; i++) {
 				_mixin(dest, arguments[i]);
 			}
@@ -164,32 +166,30 @@ define([
 		}
 		=====*/
 
-		clone: function (src) {
-			if (!src || typeof src !== 'object' || src.toString() === '[object Function]') {
-				return src;
+		clone: function (object) {
+			var returnValue;
+
+			if (!object || typeof object !== 'object') {
+				returnValue = object;
 			}
-			if (src.nodeType && 'cloneNode' in src) {
-				return src.cloneNode(true);
+			else if (object.nodeType && 'cloneNode' in object) {
+				returnValue = object.cloneNode(true);
 			}
-			if (src instanceof Date) {
-				return new Date(src.getTime());
-			}
-			if (src instanceof RegExp) {
-				return new RegExp(src);
-			}
-			var r, i;
-			if (src instanceof Array || typeof src === 'array') {
-				r = [];
-				for (i = 0; i < src.length; i++) {
-					if (i in src) {
-						r[i] = lang.clone(src[i]);
-					}
-				}
+			else if (object instanceof Date || object instanceof RegExp) {
+				returnValue = new object.constructor(object);
 			}
 			else {
-				r = Object.create(src.prototype || src);
+				if (Array.isArray(object)) {
+					returnValue = [];
+				}
+				else {
+					returnValue = object.constructor ? new object.constructor() : {};
+				}
+
+				_mixin(returnValue, object, lang.clone);
 			}
-			return _mixin(r, src, lang.clone);
+
+			return returnValue;
 		},
 
 		hitch: function (scope, method) {

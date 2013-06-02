@@ -1,7 +1,9 @@
 define([
 	'./doc',
-	'./has'
-], function (doc, has) {
+	'./has',
+	'./lang',
+	'./on'
+], function (doc, has, lang, on) {
 	'use strict';
 
 	has.add('dom-element-matches', function () {
@@ -62,7 +64,7 @@ define([
 		return ((typeof id === 'string') ? this.doc.getElementById(id) : id) || null;
 	}
 
-	function put(node/*, selectors...*/) {
+	function add(node/*, selectors...*/) {
 		var args = arguments,
 			// use the first argument as the default return value in case only a DOM Node is passed in
 			returnValue = node,
@@ -198,7 +200,7 @@ define([
 					currentNode = thisDoc.createDocumentFragment();
 					var self = this;
 					argument.forEach(function (item) {
-						currentNode.appendChild(put.call(self, item));
+						currentNode.appendChild(add.call(self, item));
 					});
 					argument = currentNode;
 				}
@@ -236,6 +238,10 @@ define([
 			node.appendChild(fragment);
 		}
 		return returnValue;
+	}
+
+	function modify(node /*, selectors...*/) {
+		return node;
 	}
 
 	function query(/*selectors...*/) {
@@ -365,11 +371,73 @@ define([
 			}
 		}
 
-		return results;
+		return decorate.call(this, results);
 	}
 
-	function remove(node/*, selectors...*/) {
+	function remove(node) {
+		var parentNode;
+		if ((parentNode = node.parentNode)) {
+			parentNode.removeChild(node);
+		}
+	}
 
+	var nodeListDescriptors = {
+		on: {
+			value: function (type, listener) {
+				var handles = this.map(function (node) {
+					return on(node, type, listener);
+				});
+				handles.remove = function () {
+					handles.forEach(function (handle) {
+						handle.remove();
+					});
+				};
+				return handles;
+			},
+			configurable: true
+		},
+		add: {
+			value: function (/* selectors... */) {
+				var self = this,
+					args = Array.prototype.slice.call(arguments);
+				return decorate.call(self, self.map(function (node) {
+					return add.apply(self, [ node ].concat(args));
+				}));
+			},
+			configurable: true
+		},
+		modify: {
+			value: function (/* selectors... */) {
+				var self = this,
+					args = Array.prototype.slice.call(arguments);
+				return self.map(function (node) {
+					return modify.apply(self, [ node ].concat(args));
+				});
+			},
+			configurable: true
+		},
+		remove: {
+			value: function () {
+				this.forEach(function (node) {
+					remove(node);
+				});
+			},
+			configurable: true
+		}
+	};
+
+	function decorate(nodes) {
+		if (!nodes) {
+			return nodes;
+		}
+		Object.defineProperties(nodes, nodeListDescriptors);
+		if (this && this.doc) {
+			Object.defineProperty(nodes, 'doc', {
+				value: this.doc,
+				configurable: true
+			});
+		}
+		return nodes;
 	}
 
 	// This all probably needs to be moved somewhere else, but it exists in dojo/dom and doesn't have another home at
@@ -406,8 +474,12 @@ define([
 			value: get,
 			enumerable: true
 		},
-		put: {
-			value: put,
+		add: {
+			value: add,
+			enumerable: true
+		},
+		modify: {
+			value: modify,
 			enumerable: true
 		},
 		query: {
@@ -431,6 +503,10 @@ define([
 			value: function (name, uri) {
 				(namespaces || (namespaces = {}))[name] = uri;
 			},
+			enumerable: true
+		},
+		nodeListDescriptors: {
+			value: nodeListDescriptors,
 			enumerable: true
 		},
 		doc: {

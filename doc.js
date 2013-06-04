@@ -126,6 +126,12 @@ define([
 				};
 				return this;
 			},
+			firstChild: property({
+				get: function () {
+					return this.children && this.children.length ? this.children[0] : null;
+				},
+				enumerable: true
+			}),
 			children: false,
 			attributes: false,
 			insertBefore: function (child, reference) {
@@ -165,6 +171,15 @@ define([
 					children = this.children = [];
 				}
 				children.push(child);
+			},
+			removeChild: function (child) {
+				if (this.children && this.children.length) {
+					var idx = this.children.indexOf(child);
+					if (~idx) {
+						return this.children.splice(idx, 1);
+					}
+				}
+				throw new Error('Not a child of node.');
 			},
 			setAttribute: function (name, value/*, escape*/) {
 				var attributes = this.attributes || (this.attributes = []);

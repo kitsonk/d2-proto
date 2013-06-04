@@ -1,0 +1,12 @@
+div.foo:id(test)
+	div
+		if testVal === 1
+			div Test Value === 1
+		elseif testVal === 2
+			div Test Value === 2
+		else
+			div Test Value !== 1
+	has host-browser
+		div I am running in a browser
+	else
+		button[type=button][name=someButton] I am not running in a browser

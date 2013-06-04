@@ -74,6 +74,29 @@ it is the child of the preceding line and the same indentation a sibling.
 
 **TODOC**
 
+#### :id()
+
+There is a special pseudo selector that is specifically designed to be able to reference nodes after they are generated,
+versus setting the node's ID property.  This pseudo selector is `:id()` and the value between the parenthesis will be
+used to reference the node upon the return value of the generate.  For example, if I wanted to identify a particular
+`div` I would do something like this:
+
+```
+div.foo
+	div:id(content)
+```
+
+The following would be generated:
+
+```html
+<div class="foo">
+	<div></div>
+</div>
+```
+
+But the return from `.render()` would be an object that contains a single property of `content` which has been
+assigned the inner node.
+
 ### Variables
 
 Variables can be used in templates using special markup and then are processed either at generation or compile time.
@@ -201,6 +224,20 @@ div.foo
 		button[type=button][content=Log In]
 ```
 
+#### has
+
+This is a convenience keyword allows access directly to the `has()` API for branch based on feature
+detection/expression.  You can simply pass the string feature identifier after the `has` keyword.  It can work in
+conjunction with `else` to provide an alternative path.  For example, if you wanted to provide one path for the browser based templated versus potentially server side, you would do something like this:
+
+```
+div.foo
+	has host-browser
+		div[content=I am running on a browser]
+	else
+		div[content=I am not running on a browser]
+```
+
 #### switch, case, default
 
 Complex branch logic can be expressed in templates via the keywords `switch`, `case` and `default`.  For example if you
@@ -224,7 +261,7 @@ div.foo
 If used as a plugin, an instance of `Template` is created loaded with the supplied template argument, which becomes
 the target of further actions.
 
-### Template.generate(node, vars)
+### Template.render(node, vars)
 
 This takes the template that has been loaded, compiles it and then creates the DOM.  If `node` is passed, the template
 is created using that node as a parent.  The `vars` argument is an optional argument used for looking up any named

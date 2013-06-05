@@ -6,6 +6,11 @@ div.foo:id(test)
 			div Test Value === 2
 		else
 			div Test Value !== 1
+	ul
+		each i in testArray
+			li Value
+	unless testVal === 1
+		div TestVal doesn't equal 1
 	has host-browser
 		div I am running in a browser
 	else

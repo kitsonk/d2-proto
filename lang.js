@@ -2,7 +2,10 @@ define([
 	'./properties'
 ], function (properties) {
 
+	var slice = Array.prototype.slice;
+
 	function _mixin(dest, source, copyFunc) {
+		'use strict';
 		// summary:
 		//		Copies/adds all enumerable properties of source to dest; returns dest.
 		// dest: Object
@@ -40,10 +43,12 @@ define([
 	}
 
 	function _toArray(obj, offset, startWith) {
-		return (startWith || []).concat(Array.prototype.slice.call(obj, offset || 0));
+		'use strict';
+		return (startWith || []).concat(slice.call(obj, offset || 0));
 	}
 
 	function _hitchArgs(scope, method) {
+		'use strict';
 		var pre = _toArray(arguments, 2);
 		var named = typeof method === 'string';
 		return function () {
@@ -56,14 +61,18 @@ define([
 		}; // Function
 	}
 
+	function getGlobal() {
+		// I cannot find anything that provides access to the global scope under "use strict"
+		return (function () {
+			return this;
+		}());
+	}
+
 	function getProp(/*Array*/parts, /*Boolean*/create, /*Object*/context) {
+		'use strict';
 		var p,
 			i = 0,
-
-			// I cannot find anything that provides access to the global scope under "use strict"
-			global = (function () {
-			    return this;
-			}());
+			global = getGlobal();
 
 		if (!context) {
 			if (!parts.length) {
@@ -85,6 +94,7 @@ define([
 		//		This module defines Javascript language extensions.
 
 		mixin: function (dest /*, sources...*/) {
+			'use strict';
 			// summary:
 			//		Copies/adds all properties of one or more sources to dest; returns dest.
 			// dest: Object
@@ -131,6 +141,7 @@ define([
 		},
 
 		delegate: function (obj, props) {
+			'use strict';
 			var d = Object.create(typeof obj === 'function' ? obj.prototype : obj || Object.prototype);
 			return props ? _mixin(d, props) : d;
 		},
@@ -167,6 +178,7 @@ define([
 		=====*/
 
 		clone: function (object) {
+			'use strict';
 			var returnValue;
 
 			if (!object || typeof object !== 'object') {
@@ -192,7 +204,31 @@ define([
 			return returnValue;
 		},
 
+		/**
+		 * Return a function bound to a specific context (this). Supports late binding.
+		 *
+		 * @param {Object} object
+		 * The object to which to bind the context. May be null except for late binding.
+		 * @param {(function()|string)} method
+		 * A function or method name to bind a context to. If a string is passed, the look-up
+		 * will not happen until the bound function is invoked (late-binding).
+		 * @param {...?} var_args
+		 * Arguments to pass to the bound function.
+		 * @returns {function()}
+		 */
+		bind: function (context, method) {
+			var extra = slice.call(arguments, 2);
+			if (typeof method === 'string') {
+				// late binding
+				return function () {
+					return context[method].apply(context, extra.concat(slice.call(arguments)));
+				};
+			}
+			return method.bind.apply(method, [ context ].concat(extra));
+		},
+
 		hitch: function (scope, method) {
+			'use strict';
 			// summary:
 			//		Returns a function that will only ever execute in the a given scope.
 			//		This allows for easy use of object member functions
@@ -246,6 +282,7 @@ define([
 		},
 
 		setObject: function (name, value, context) {
+			'use strict';
 			// summary:
 			//		Set a property from a dot-separated string, such as "A.B.C"
 			// description:
@@ -279,6 +316,7 @@ define([
 		},
 
 		getObject: function (name, create, context) {
+			'use strict';
 			// summary:
 			//		Get a property from a dot-separated string, such as "A.B.C"
 			// description:
@@ -295,7 +333,10 @@ define([
 			return getProp(name.split('.'), create, context); // Object
 		},
 
+		getGlobal: getGlobal,
+
 		exists: function (name, obj) {
+			'use strict';
 			// summary:
 			//		determine if an object supports a given method
 			// description:

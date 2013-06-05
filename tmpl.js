@@ -5,17 +5,131 @@ define([
 	'require',
 	'./doc',
 	'./dom',
-	'./has'
-], function (exports, request, fs, require, doc, dom, has) {
+	'./has',
+	'./lang',
+	'./properties'
+], function (exports, request, fs, require, doc, dom, has, lang, properties) {
 	'use strict';
 
 	var notFound = {},
 		pending = {},
 		cache = {},
+		varsRE = /\$\{([^\s\}]+)\}/g,
 		indentationRE = /^(\t|\s)+/,
 		idPseudoSelectorRE = /:id\(([^\)]+)\)/,
 		selectorRE = /^([^\[\s]+(?:\[[^\]]+\])*)(?: (.+))?$/,
-		keywordRE = /^(if|else|elseif|unless|each|has)(?: (.+))?$/;
+		keywordRE = /^(if|else|elseif|unless|each|has)(?: (.+))?$/,
+		eachRE = /^(\S+)(?:, *(\S+))? in (\S+)/;
+
+	/**
+	 * Parse variables, marked up in the format of `${name}` out of a template string and bind changes to them to the
+	 * listener.  The map provides initial values for the any parsed variables which then are then replaced with the
+	 * bound variables.  The function returns a hash of all parsed variables.
+	 * @param  {[type]} listener [description]
+	 * @param  {[type]} map      [description]
+	 * @param  {[type]} text     [description]
+	 * @return {[type]}          [description]
+	 */
+	function bindVars(listener, map, text) {
+
+		function parseVarNames(text) {
+			var match,
+				unique = {},
+				varNames = [];
+
+			while ((match = varsRE.exec(text))) {
+				if (!unique[match[1]]) {
+					unique[match[1]] = 1;
+					varNames.push(match[1]);
+				}
+			}
+
+			return varNames;
+		}
+
+		function installObservableProperty(target, name, listener, descriptor) {
+
+			function getListenerDescriptor(listener, oldDescriptor) {
+				oldDescriptor = oldDescriptor || { value: undefined, enumerable: true };
+				var value = oldDescriptor.value;
+				return {
+					get: function () {
+						return value;
+					},
+					set: function (newValue) {
+						if (value !== newValue) {
+							listener({
+								type: 'update',
+								target: this,
+								name: name,
+								value: newValue,
+								oldValue: value
+							});
+							value = newValue;
+						}
+					},
+					enumerable: oldDescriptor.enumerable,
+					configurable: true
+				};
+			}
+
+			return Object.defineProperty(target, name, getListenerDescriptor(listener, descriptor));
+		}
+
+		function uninstallObservableProperty(target, name) {
+			if (name in target) {
+				var oldDescriptor = properties.getDescriptor(target, name);
+				Object.defineProperty(target, name, {
+					value: oldDescriptor.get(),
+					writable: true,
+					enumerable: oldDescriptor.enumerable,
+					configurable: true
+				});
+			}
+			return target[name];
+		}
+
+		function decorateListener(listener) {
+			if (!('remove' in listener)) {
+				listener.remove = function () {
+					var i, property;
+					for (i = 0; i < this.properties.length; i++) {
+						property = this.properties[i];
+						uninstallObservableProperty(property.target, property.name);
+					}
+				};
+			}
+			if (!('properties' in listener)) {
+				listener.properties = [];
+			}
+			return listener;
+		}
+
+		var boundVars = {},
+			varNames = parseVarNames(text),
+			property,
+			i;
+
+		decorateListener(listener);
+
+		for (i = 0; i < varNames.length; i++) {
+			property = varNames[i];
+			installObservableProperty(boundVars, property, listener, properties.getDescriptor(map, property));
+			listener.properties.push({
+				target: boundVars,
+				name: property
+			});
+			if (property in map) {
+				Object.defineProperty(map, property, properties.getDescriptor(boundVars, property));
+				listener.properties.push({
+					target: map,
+					name: property
+				});
+			}
+		}
+
+		return boundVars;
+	}
 
 	/**
 	 * Compile a `tmpl` formatted template string
@@ -207,7 +321,12 @@ define([
 		function renderTemplate(template, parentNode, depth) {
 			var i,
 				item,
-				itemNode;
+				itemNode,
+				eachItems,
+				target,
+				key,
+				valueKey,
+				indexKey;
 
 			for (i = 0; i < template.length; i++) {
 				item = template[i];
@@ -226,28 +345,70 @@ define([
 				else if (item.c) {
 					switch (item.k) {
 					case 'has':
-						if (has(item.e)) {
-							logicStack[depth] = true;
+						if ((logicStack[depth] = has(item.e))) {
 							renderTemplate(item.c, parentNode, depth + 1);
 						}
 						break;
 					case 'if':
 						logicStack[depth] = false;
-						if (checkExpression(item.e, vars)) {
-							logicStack[depth] = true;
+						if ((logicStack[depth] = checkExpression(item.e, vars))) {
+							renderTemplate(item.c, parentNode, depth + 1);
+						}
+						break;
+					case 'unless':
+						logicStack[depth] = false;
+						if ((logicStack[depth] = !checkExpression(item.e, vars))) {
 							renderTemplate(item.c, parentNode, depth + 1);
 						}
 						break;
 					case 'elseif':
-						if (logicStack[depth] !== true) {
-							if (checkExpression(item.e, vars)) {
-								logicStack[depth] = true;
+						if (!logicStack[depth]) {
+							if ((logicStack[depth] = checkExpression(item.e, vars))) {
 								renderTemplate(item.c, parentNode, depth + 1);
 							}
 						}
+						break;
 					case 'else':
-						if (logicStack[depth] !== true) {
+						if (!logicStack[depth]) {
 							renderTemplate(item.c, parentNode, depth + 1);
+						}
+						break;
+					case 'each':
+						eachItems = eachRE.exec(item.e);
+						if (eachItems) {
+							target = lang.getObject(eachItems[3], false, vars);
+							valueKey = eachItems[1];
+							indexKey = eachItems[2];
+							if (target !== null && typeof target === 'object') {
+								if (target.length) {
+									console.log('array like');
+									for (key = 0; key < target.length; key++) {
+										vars[valueKey] = target[key];
+										if (indexKey) {
+											vars[indexKey] = key;
+										}
+										renderTemplate(item.c, parentNode, depth + 1);
+									}
+								}
+								else {
+									console.log('object');
+									for (key in target) {
+										vars[valueKey] = target[key];
+										if (indexKey) {
+											vars[indexKey] = key;
+										}
+										renderTemplate(item.c, parentNode, depth + 1);
+									}
+								}
+								delete vars[valueKey];
+								delete vars[indexKey];
+							}
+							else {
+								throw new TypeError('Cannot iterate over non-object.');
+							}
+						}
+						else {
+							SyntaxError('"each" keyword not properly formatted');
 						}
 						break;
 					default:
@@ -300,6 +461,14 @@ define([
 
 	// Define the Template prototype
 	Object.defineProperties(Template.prototype, {
+		bindVars: {
+			value: function (listener, map, text) {
+				text = text || this.text;
+				map = map || {};
+				return bindVars(listener, map, text);
+			},
+			enumerable: true
+		},
 		render: {
 			value: function (node, vars) {
 				if (!this.template) {

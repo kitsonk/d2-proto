@@ -21,37 +21,66 @@ define([
 		keywordRE = /^(if|else|elseif|unless|each|has)(?: (.+))?$/,
 		eachRE = /^(\S+)(?:, *(\S+))? in (\S+)/;
 
+
 	/**
-	 * Parse variables, marked up in the format of `${name}` out of a template string and bind changes to them to the
-	 * listener.  The map provides initial values for the any parsed variables which then are then replaced with the
-	 * bound variables.  The function returns a hash of all parsed variables.
-	 * @param  {[type]} listener [description]
-	 * @param  {[type]} map      [description]
-	 * @param  {[type]} text     [description]
-	 * @return {[type]}          [description]
+	 * Parses a text string for variables identified in the format of `${name}` and returns a unique array of the names.
+	 * @param  {String} text The string to be parsed for the variable names.
+	 * @return {Array}       An Array of strings that contain the variable names parsed out of `text`.
 	 */
-	function bindVars(listener, map, text) {
+	function parseVarNames(text) {
+		var match,
+			unique = {},
+			varNames = [];
 
-		function parseVarNames(text) {
-			var match,
-				unique = {},
-				varNames = [];
-
-			while ((match = varsRE.exec(text))) {
-				if (!unique[match[1]]) {
-					unique[match[1]] = 1;
-					varNames.push(match[1]);
-				}
+		while ((match = varsRE.exec(text))) {
+			if (!unique[match[1]]) {
+				unique[match[1]] = 1;
+				varNames.push(match[1]);
 			}
-
-			return varNames;
 		}
 
+		return varNames;
+	}
+
+	/**
+	 * Takes an array of property names, creates a property with that name, when it changes, will notify the supplied
+	 * listener.  Any of the properties that exist in the supplied context are then used as the value of new bound
+	 * property as well as replaced in the context.
+	 * @param  {Array}    names      An array of strings which represent the property names to be created as bound
+	 *                               properties
+	 * @param  {Function} listener   The function that changes to the bound properties should be dispatched to
+	 * @param  {Object}   [context]  An optional hash of properties which should "seed" the initial value of the bound
+	 *                               properties.  The associated property will be replaced with a bound version of the
+	 *                               property as well.
+	 * @return {Object}              A hash of the bound properties which have been created.
+	 */
+	function bind(names, listener, context) {
+
+		/**
+		 * Installs a property in the target that dispatches its changes to the listener.  Note, for simplicity, this
+		 * only handles data descriptor based properties and not accessor descriptors.
+		 * @param  {Object}   target       The object that the property should be installed on.
+		 * @param  {String}   name         The name of the property to install
+		 * @param  {Function} listener     The function that changes to the property should be dispatched to.
+		 * @param  {Object}   [descriptor] An existing property descriptor that would define the value and enumerability
+		 *                                 of the property.
+		 * @return {Object}                The target with the installed property
+		 */
 		function installObservableProperty(target, name, listener, descriptor) {
 
+			/**
+			 * Returns a property descriptor that dispatches changes to the property to a listener.
+			 * @param  {Function} listener        The Function to dispatch changes to
+			 * @param  {Object}   [oldDescriptor] A "base" property descriptor to use
+			 * @return {Object}                   The property descriptor
+			 */
 			function getListenerDescriptor(listener, oldDescriptor) {
 				oldDescriptor = oldDescriptor || { value: undefined, enumerable: true };
+
+				// this creates a shadow value which then contains the actual value
 				var value = oldDescriptor.value;
+
+				// provides a "wrapped" accessor descriptor
 				return {
 					get: function () {
 						return value;
@@ -73,12 +102,22 @@ define([
 				};
 			}
 
+			// define/redefine the target property
 			return Object.defineProperty(target, name, getListenerDescriptor(listener, descriptor));
 		}
 
+		/**
+		 * Remove an observable property from the target.
+		 * @param  {Object} target The target object to have the property returned from
+		 * @param  {String} name   The name of the property to uninstall
+		 * @return {Object}        The target with the property reset to non-observable
+		 */
 		function uninstallObservableProperty(target, name) {
 			if (name in target) {
+				// Retrieve the existing descriptor
 				var oldDescriptor = properties.getDescriptor(target, name);
+
+				// Redefine the property, getting the current value and current enumerability of the property
 				Object.defineProperty(target, name, {
 					value: oldDescriptor.get(),
 					writable: true,
@@ -86,49 +125,63 @@ define([
 					configurable: true
 				});
 			}
-			return target[name];
+			return target;
 		}
 
+		/**
+		 * Add decoration to the listener function so that the listener can remove its bindings.  The listener will be
+		 * decorated with a `.remove()` function which will provide a method to remove listeners and a `bindings`
+		 * array which will be used to track bound properties.
+		 * @param  {Function} listener The target listener to decorate
+		 * @return {Function}          The listener, now decorated
+		 */
 		function decorateListener(listener) {
 			if (!('remove' in listener)) {
 				listener.remove = function () {
-					var i, property;
-					for (i = 0; i < this.properties.length; i++) {
-						property = this.properties[i];
-						uninstallObservableProperty(property.target, property.name);
+					var binding;
+					while ((binding = this.bindings.pop())) {
+						uninstallObservableProperty(binding.target, binding.name);
 					}
 				};
 			}
-			if (!('properties' in listener)) {
-				listener.properties = [];
+			if (!('bindings' in listener)) {
+				listener.bindings = [];
 			}
 			return listener;
 		}
 
-		var boundVars = {},
-			varNames = parseVarNames(text),
+		var bound = {},
 			property,
 			i;
 
+		// Decorate the listener with helpers
 		decorateListener(listener);
 
-		for (i = 0; i < varNames.length; i++) {
-			property = varNames[i];
-			installObservableProperty(boundVars, property, listener, properties.getDescriptor(map, property));
-			listener.properties.push({
-				target: boundVars,
+		// Iterate through the property names
+		for (i = 0; i < names.length; i++) {
+			property = names[i];
+			// Make the property observable
+			installObservableProperty(bound, property, listener, properties.getDescriptor(context, property));
+
+			// Add to listener bindings stack
+			listener.bindings.push({
+				target: bound,
 				name: property
 			});
-			if (property in map) {
-				Object.defineProperty(map, property, properties.getDescriptor(boundVars, property));
-				listener.properties.push({
-					target: map,
+
+			if (property in context) {
+				// This property was in the context so we should copy over the property descriptor to the context
+				Object.defineProperty(context, property, properties.getDescriptor(bound, property));
+
+				// Add this to the binding stack as well
+				listener.bindings.push({
+					target: context,
 					name: property
 				});
 			}
 		}
 
-		return boundVars;
+		return bound;
 	}
 
 	/**
@@ -461,11 +514,12 @@ define([
 
 	// Define the Template prototype
 	Object.defineProperties(Template.prototype, {
-		bindVars: {
-			value: function (listener, map, text) {
+		parseBind: {
+			value: function (listener, context, text) {
 				text = text || this.text;
-				map = map || {};
-				return bindVars(listener, map, text);
+				context = context || {};
+				var names = parseVarNames(text);
+				return bind(names, listener, context);
 			},
 			enumerable: true
 		},

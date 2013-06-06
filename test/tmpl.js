@@ -27,17 +27,17 @@ define([
 		test.test('bind vars', function () {
 			var dfd = this.async(1000);
 			require(['d2-proto/tmpl!./resources/vars.tmpl'], dfd.callback(function (tmpl) {
-				var map = {
+				var context = {
 					text: 'goodness'
 				};
 				var listener = function (changeRecord) {
 					console.log(changeRecord);
 				};
-				var vars = tmpl.bindVars(listener, map);
-				map.text = 'hello world';
+				var vars = tmpl.parseBind(listener, context);
+				context.text = 'hello world';
 				listener.remove();
 				console.log(vars);
-				console.log(map);
+				console.log(context);
 			}));
 		});
 	});
